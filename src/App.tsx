@@ -6,16 +6,19 @@
 import React, { useState, useEffect } from "react";
 import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert } from "lucide-react";
 import IndicadoresMacro from "./components/IndicadoresMacro";
+import EmpresasRJ from "./components/EmpresasRJ";
 import ConsolaLog from "./components/ConsolaLog";
 import BlueskySim from "./components/BlueskySim";
 import ConsolaAnalista from "./components/ConsolaAnalista";
 import Teoremas from "./Teoremas";
 import GuiaDeVoz from "./components/GuiaDeVoz";
+import UserLoginArea from "./components/UserLoginArea";
+import PremiumControlPanel from "./components/PremiumControlPanel";
 import { EconomicRecord, LogEntry, LogLevel, LogCategory, BlueskyThread } from "./db/types";
 
 export default function App() {
-  const [brent, setBrent] = useState(85.80);
-  const [ttf, setTtf] = useState(35.40);
+  const [brent, setBrent] = useState(93.09);
+  const [ttf, setTtf] = useState(48.50);
   const [selic, setSelic] = useState(10.75);
   const [sentiment, setSentiment] = useState(59);
   const [rating, setRating] = useState("BBB-");
@@ -47,6 +50,75 @@ export default function App() {
   const [waitlistHandle, setWaitlistHandle] = useState("");
   const [isWaitlistSubmitting, setIsWaitlistSubmitting] = useState(false);
   const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+
+  // User Session & Customizable Preferences State
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+
+  const loadUserProfile = async (email: string, name?: string, picture?: string) => {
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, picture })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser(data.user);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading profile from JSON DB:", err);
+    }
+  };
+
+  const handleLoginSuccess = (user: any) => {
+    setCurrentUser(user);
+    localStorage.setItem("selix_user_email", user.email);
+    localStorage.setItem("selix_user_name", user.name);
+    if (user.picture) localStorage.setItem("selix_user_picture", user.picture);
+    
+    // Add success logger log immediately
+    fetchLogs();
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("selix_user_email");
+    localStorage.removeItem("selix_user_name");
+    localStorage.removeItem("selix_user_picture");
+    fetchLogs();
+  };
+
+  const handleUpdateCustomizations = async (newCusts: any) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: currentUser.email, customizations: newCusts })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser(data.user);
+        }
+      }
+    } catch (err) {
+      console.error("Error updating customizations:", err);
+    }
+  };
+
+  // Sync session on mount
+  useEffect(() => {
+    const cachedEmail = localStorage.getItem("selix_user_email");
+    if (cachedEmail) {
+      const cachedName = localStorage.getItem("selix_user_name") || undefined;
+      const cachedPct = localStorage.getItem("selix_user_picture") || undefined;
+      loadUserProfile(cachedEmail, cachedName, cachedPct);
+    }
+  }, []);
+
 
   const fetchWaitlist = async () => {
     try {
@@ -215,6 +287,13 @@ export default function App() {
 
   const handleUpdateSelic = async (newValue: number) => {
     setSelic(newValue);
+    if (newValue >= 10.00) {
+      setRating("BBB-");
+      setInvestmentGrade(false);
+    } else {
+      setRating("Investment Grade");
+      setInvestmentGrade(true);
+    }
     try {
       await fetch("/api/state/update", {
         method: "POST",
@@ -365,6 +444,45 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
     { date: "2026-06-06", brent: brent, selic: selic, sentiment: sentiment },
   ];
 
+  const getThemeColors = () => {
+    const accent = currentUser?.customizations?.themeAccent || "indigo";
+    switch (accent) {
+      case "violet":
+        return {
+          glowPrimary: "bg-violet-600/10",
+          glowSecondary: "bg-indigo-600/5",
+          accentColor: "violet",
+        };
+      case "emerald":
+        return {
+          glowPrimary: "bg-emerald-600/10",
+          glowSecondary: "bg-teal-600/5",
+          accentColor: "emerald",
+        };
+      case "sky":
+        return {
+          glowPrimary: "bg-sky-400/10",
+          glowSecondary: "bg-blue-600/5",
+          accentColor: "sky",
+        };
+      case "gray":
+        return {
+          glowPrimary: "bg-slate-500/10",
+          glowSecondary: "bg-slate-700/5",
+          accentColor: "slate",
+        };
+      case "indigo":
+      default:
+        return {
+          glowPrimary: "bg-indigo-600/10",
+          glowSecondary: "bg-violet-600/5",
+          accentColor: "indigo",
+        };
+    }
+  };
+
+  const themeColors = getThemeColors();
+
   if (isLoadingState) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-mono text-xs text-amber-500 gap-3">
@@ -377,8 +495,8 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden font-sans" id="selic-app-viewport">
       {/* Decorative ambient gradients */}
-      <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[50%] bg-violet-600/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-15%] w-[50%] h-[50%] bg-emerald-600/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className={`absolute top-[-10%] left-[-15%] w-[50%] h-[50%] ${themeColors.glowPrimary} blur-[120px] rounded-full pointer-events-none`} />
+      <div className={`absolute bottom-[-10%] right-[-15%] w-[50%] h-[50%] ${themeColors.glowSecondary} blur-[120px] rounded-full pointer-events-none`} />
 
       {/* COMPACT MAIN HEADER */}
       <header className="border-b border-slate-900 bg-slate-950/60 backdrop-blur px-6 py-4 sticky top-0 z-30 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -435,6 +553,13 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
             <RefreshCcw className={`w-3.5 h-3.5 ${isSyncingLive ? "animate-spin text-emerald-400" : ""}`} />
             {isSyncingLive ? "CRAWLING..." : "LIVE SYNC"}
           </button>
+
+          {/* User Sign-In/Auth area */}
+          <UserLoginArea
+            currentUser={currentUser}
+            onLoginSuccess={handleLoginSuccess}
+            onLogout={handleLogout}
+          />
         </div>
       </header>
 
@@ -449,6 +574,14 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           watchdogStatus={systemWatchdog.status}
           watchdogRam={systemWatchdog.ramUsed}
         />
+
+        {/* Premium Customization Control Panel */}
+        {currentUser && (
+          <PremiumControlPanel
+            currentUser={currentUser}
+            onUpdateCustomizations={handleUpdateCustomizations}
+          />
+        )}
         
         {/* ROW 1: Macro Charts & AI Assistant / Bluesky Simulation split */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6" id="bento-row-1">
@@ -476,6 +609,14 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
               isPending={isAiPending}
             />
           </div>
+        </div>
+
+        {/* ROW 1.5: Rio de Janeiro Stocks Projection Simulator */}
+        <div id="rj-companies-wrapper" className="w-full">
+          <EmpresasRJ 
+            currentSelic={selic} 
+            defaultProjectedSelic={currentUser?.customizations?.customSelicTarget}
+          />
         </div>
 
         {/* ROW 2: Linux Watchdog Monitor CLI Console & Bluesky Timeline Publisher */}

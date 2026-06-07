@@ -8,7 +8,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
-import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices, addWaitlistEntry, getWaitlistEntries } from "./src/db/database";
+import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices, addWaitlistEntry, getWaitlistEntries, saveDbUser, getDbUserByEmail } from "./src/db/database";
 
 dotenv.config();
 
@@ -41,8 +41,8 @@ if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
 }
 
 // In-Memory state for simulation
-let currentBrent = 85.80;
-let currentTtf = 35.40; // EUR/MWh natural gas
+let currentBrent = 93.09;
+let currentTtf = 48.50; // EUR/MWh natural gas
 let currentSelic = 10.75;
 let currentSentiment = 59;
 let currentRating = "BBB-";
@@ -120,6 +120,221 @@ const mockThreads = [
 ];
 
 // API Endpoints
+
+// Google OAuth / Mock Customizer endpoints
+app.get("/api/auth/url", (req, res) => {
+  const appUrl = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+
+  if (!clientId || clientId === "" || clientId === "GOOGLE_CLIENT_ID") {
+    // Return simulator URL to enable immediate testing
+    return res.json({
+      url: `${appUrl}/auth/simulate`,
+      simulated: true,
+      message: "Executando em modo de simulação (GOOGLE_CLIENT_ID não configurado)."
+    });
+  }
+
+  const redirectUri = `${appUrl}/auth/callback`;
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "openid profile email",
+    access_type: "offline",
+    prompt: "consent"
+  });
+
+  res.json({
+    url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+    simulated: false
+  });
+});
+
+app.get("/auth/simulate", (req, res) => {
+  const appUrl = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
+  res.redirect(`${appUrl}/auth/callback?code=mock_simulated_google_user`);
+});
+
+app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
+  const code = req.query.code as string;
+  let user: any = null;
+
+  const appUrl = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
+
+  if (code === "mock_simulated_google_user" || !process.env.GOOGLE_CLIENT_ID) {
+    // Generate simulated Google User profile
+    user = {
+      email: "sobrinhoSJ@gmail.com",
+      name: "Zeh Sobrinho (Simulado)",
+      picture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120",
+      provider: "google",
+      customizations: {
+        customSelicTarget: 9.00,
+        customBrentTarget: 80.00,
+        customTtfTarget: 30.00,
+        watchdogSensitivity: 80,
+        themeAccent: "violet",
+        notes: "Mantenha o monitoramento sobre a bio-blindagem do MME."
+      },
+      verified: true,
+      timestamp: new Date().toISOString()
+    };
+  } else {
+    try {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const redirectUri = `${appUrl}/auth/callback`;
+
+      // Exchange OAuth code for tokens
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId!,
+          client_secret: clientSecret!,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code"
+        })
+      });
+
+      if (!tokenRes.ok) {
+        throw new Error(`Google exchange error: ${tokenRes.statusText}`);
+      }
+
+      const tokens: any = await tokenRes.json();
+      const accessToken = tokens.access_token;
+
+      // Fetch user profile info
+      const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+
+      if (!profileRes.ok) {
+        throw new Error("Failed to fetch Google profile");
+      }
+
+      const profile: any = await profileRes.json();
+      user = {
+        email: profile.email,
+        name: profile.name || profile.given_name || "Google User",
+        picture: profile.picture,
+        provider: "google",
+        customizations: {
+          customSelicTarget: 9.00,
+          customBrentTarget: 85.00,
+          customTtfTarget: 35.00,
+          watchdogSensitivity: 90,
+          themeAccent: "indigo",
+          notes: ""
+        },
+        verified: true,
+        timestamp: new Date().toISOString()
+      };
+    } catch (err: any) {
+      console.error("Error exchanging OAuth code:", err);
+      return res.send(`
+        <html>
+          <body style="background:#0f172a; color:#f8fafc; font-family:sans-serif; text-align:center; padding:50px;">
+            <h2 style="color:#ef4444;">Erro de Autenticação OAuth</h2>
+            <p>${err.message || "Erro desconhecido durante a autenticação."}</p>
+            <button onclick="window.close()" style="background:#4f46e5; border:none; color:white; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold; margin-top:15px;">Fechar Janela</button>
+          </body>
+        </html>
+      `);
+    }
+  }
+
+  // Persist user in the JSON databases
+  if (user) {
+    const existing = await getDbUserByEmail(user.email);
+    if (existing) {
+      // Merge customizations with existing profile so they are not wiped out
+      user.customizations = { ...user.customizations, ...existing.customizations };
+    }
+    await saveDbUser(user);
+    
+    // Add success log to the console
+    mockLogs.unshift({
+      id: String(mockLogs.length + 1),
+      timestamp: new Date().toLocaleTimeString(),
+      level: "SUCCESS",
+      category: "SYSTEM",
+      message: `Usuário ${user.name} (${user.email}) autenticado com sucesso e carregado do JSON DB.`
+    });
+  }
+
+  // Send success message to parent window and close popup
+  res.send(`
+    <html>
+      <body style="background:#0f172a; color:#f8fafc; font-family:sans-serif; text-align:center; padding-top:100px;">
+        <div style="background:#1e293b; border-radius:12px; border:1px solid #334155; display:inline-block; padding:30px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+          <div style="width:60px; height:60px; border-radius:50%; background:#22c55e; display:flex; align-items:center; justify-content:center; margin:0 auto 15px;">
+            <svg style="width:30px; height:30px; fill:none; stroke:white; stroke-width:3;" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 style="margin:5px 0 10px;">Autenticado com Sucesso</h2>
+          <p style="color:#94a3b8; font-size:14px; margin-bottom:20px;">Olá <strong>${user?.name || "Investidor"}</strong>, sua sessão foi sincronizada!</p>
+          <p style="color:#64748b; font-size:12px;">Esta janela se fechará automaticamente...</p>
+        </div>
+        <script>
+          if (window.opener) {
+            window.opener.postMessage({ 
+              type: 'OAUTH_AUTH_SUCCESS', 
+              user: ${JSON.stringify(user)} 
+            }, '*');
+            setTimeout(() => {
+              window.close();
+            }, 1000);
+          } else {
+            window.location.href = '/';
+          }
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+// Profile read/write endpoint
+app.post("/api/auth/profile", async (req, res) => {
+  const { email, customizations, name, picture } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: "Email is required" });
+  }
+
+  try {
+    let existingUser = await getDbUserByEmail(email);
+    if (!existingUser) {
+      existingUser = {
+        email,
+        name: name || email.split("@")[0],
+        picture: picture || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120",
+        provider: "local",
+        customizations: customizations || {
+          customSelicTarget: 9.00,
+          customBrentTarget: 80.00,
+          customTtfTarget: 30.00,
+          watchdogSensitivity: 85,
+          themeAccent: "indigo",
+          notes: ""
+        }
+      };
+      await saveDbUser(existingUser);
+    } else if (customizations) {
+      existingUser.customizations = { ...existingUser.customizations, ...customizations };
+      if (name) existingUser.name = name;
+      if (picture) existingUser.picture = picture;
+      await saveDbUser(existingUser);
+    }
+
+    res.json({ success: true, user: existingUser });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to process user profile" });
+  }
+});
+
 app.get("/api/state", async (req, res) => {
   try {
     const dbBrent = await getHistoricalPrices("brent", 30);
@@ -186,6 +401,15 @@ app.post("/api/state/update", async (req, res) => {
     if (selic !== undefined) {
       currentSelic = parseFloat(selic);
       await savePrice("selic", currentSelic, todayStr);
+      
+      // Auto-recompute rating based on single-digit vs double-digit Selic
+      if (currentSelic >= 10.00) {
+        currentRating = "BBB-";
+        currentInvestmentGrade = false;
+      } else {
+        currentRating = "Investment Grade";
+        currentInvestmentGrade = true;
+      }
     }
     if (sentiment !== undefined) currentSentiment = parseInt(sentiment);
     if (rating !== undefined) currentRating = rating;

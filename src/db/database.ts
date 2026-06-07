@@ -1,14 +1,184 @@
-import sqlite3Pkg from "sqlite3";
+import fs from "fs";
 import path from "path";
 
-const { Database } = sqlite3Pkg;
-const dbPath = path.resolve(process.cwd(), "selix.db");
+class PureJSONDatabase {
+  private filePath: string;
+  private data: {
+    prices: any[];
+    waitlist: any[];
+    users: any[];
+  } = { prices: [], waitlist: [], users: [] };
 
-let dbInstance: any = null;
+  constructor(filePath: string) {
+    this.filePath = filePath;
+    this.loadData();
+  }
+
+  private loadData() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const fileContent = fs.readFileSync(this.filePath, "utf-8");
+        this.data = JSON.parse(fileContent);
+        if (!this.data.prices) this.data.prices = [];
+        if (!this.data.waitlist) this.data.waitlist = [];
+        if (!this.data.users) this.data.users = [];
+      } else {
+        this.saveDataToDisk();
+      }
+    } catch (err) {
+      console.error("Failed to load Pure JSON database:", err);
+      this.data = { prices: [], waitlist: [], users: [] };
+    }
+  }
+
+  private saveDataToDisk() {
+    try {
+      const dir = path.dirname(this.filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(this.filePath, JSON.stringify(this.data, null, 2), "utf-8");
+    } catch (err) {
+      console.error("Failed to save Pure JSON database to disk:", err);
+    }
+  }
+
+  serialize(callback: () => void) {
+    try {
+      callback();
+    } catch (err) {
+      console.error("Error in serialize block:", err);
+    }
+  }
+
+  run(sql: string, params: any[] | any, callback?: any) {
+    let actualParams: any[] = [];
+    let cb: any = null;
+
+    if (typeof params === "function") {
+      cb = params;
+    } else if (Array.isArray(params)) {
+      actualParams = params;
+      cb = callback;
+    } else if (params !== undefined) {
+      actualParams = [params];
+      cb = callback;
+    }
+
+    try {
+      const canonicalSql = sql.trim().replace(/\s+/g, " ").toUpperCase();
+
+      if (canonicalSql.includes("CREATE TABLE IF NOT EXISTS PRICES")) {
+        if (cb) setTimeout(() => cb(null), 0);
+        return this;
+      }
+
+      if (canonicalSql.includes("CREATE TABLE IF NOT EXISTS WAITLIST")) {
+        if (cb) setTimeout(() => cb(null), 0);
+        return this;
+      }
+
+      if (canonicalSql.includes("INSERT INTO WAITLIST")) {
+        const [name, phone, handle, timestamp] = actualParams;
+        const newEntry = {
+          id: this.data.waitlist.length + 1,
+          name,
+          phone,
+          handle,
+          timestamp: timestamp || new Date().toISOString()
+        };
+        this.data.waitlist.push(newEntry);
+        this.saveDataToDisk();
+        if (cb) setTimeout(() => cb(null), 0);
+        return this;
+      }
+
+      if (canonicalSql.includes("INSERT OR REPLACE INTO PRICES") || canonicalSql.includes("INSERT INTO PRICES")) {
+        const [asset, price, timestamp] = actualParams;
+        
+        // Emulate UNIQUE(asset, timestamp) ON CONFLICT REPLACE
+        const existingIdx = this.data.prices.findIndex(
+          p => p.asset === asset && p.timestamp === timestamp
+        );
+
+        if (existingIdx !== -1) {
+          this.data.prices[existingIdx].price = price;
+        } else {
+          const newPrice = {
+            id: this.data.prices.length + 1,
+            asset,
+            price,
+            timestamp
+          };
+          this.data.prices.push(newPrice);
+        }
+        
+        this.saveDataToDisk();
+        if (cb) setTimeout(() => cb(null), 0);
+        return this;
+      }
+
+      console.warn("Unrecognized write query in JSON database:", sql);
+      if (cb) setTimeout(() => cb(null), 0);
+    } catch (err) {
+      console.error("Error in database.run:", err);
+      if (cb) setTimeout(() => cb(err), 0);
+    }
+    return this;
+  }
+
+  all(sql: string, params: any[] | any, callback?: any) {
+    let actualParams: any[] = [];
+    let cb: any = null;
+
+    if (typeof params === "function") {
+      cb = params;
+    } else if (Array.isArray(params)) {
+      actualParams = params;
+      cb = callback;
+    } else if (params !== undefined) {
+      actualParams = [params];
+      cb = callback;
+    }
+
+    try {
+      const canonicalSql = sql.trim().replace(/\s+/g, " ").toUpperCase();
+
+      if (canonicalSql.includes("SELECT * FROM WAITLIST")) {
+        const sortedWaitlist = [...this.data.waitlist].sort((a, b) => b.id - a.id);
+        if (cb) setTimeout(() => cb(null, sortedWaitlist), 0);
+        return this;
+      }
+
+      if (canonicalSql.includes("SELECT PRICE, TIMESTAMP FROM PRICES")) {
+        const asset = actualParams[0];
+        const limit = actualParams[1] || 30;
+
+        const filtered = this.data.prices
+          .filter(p => p.asset === asset)
+          .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+          .slice(0, limit);
+
+        if (cb) setTimeout(() => cb(null, filtered), 0);
+        return this;
+      }
+
+      console.warn("Unrecognized read query in JSON database:", sql);
+      if (cb) setTimeout(() => cb(null, []), 0);
+    } catch (err) {
+      console.error("Error in database.all:", err);
+      if (cb) setTimeout(() => cb(err, []), 0);
+    }
+    return this;
+  }
+}
+
+const dbPath = path.resolve(process.cwd(), "selix_db.json");
+let dbInstance: PureJSONDatabase | null = null;
 
 export function getDb() {
   if (!dbInstance) {
-    dbInstance = new Database(dbPath);
+    dbInstance = new PureJSONDatabase(dbPath);
   }
   return dbInstance;
 }
@@ -221,3 +391,28 @@ export async function seedFromPublicApis(): Promise<void> {
     console.error("❌ Failed to query/seed Selic rates:", err);
   }
 }
+
+export function saveDbUser(user: any): Promise<void> {
+  return new Promise((resolve) => {
+    const db = getDb() as any;
+    if (!db.data.users) db.data.users = [];
+    const idx = db.data.users.findIndex((u: any) => u.email === user.email);
+    if (idx !== -1) {
+      db.data.users[idx] = { ...db.data.users[idx], ...user };
+    } else {
+      db.data.users.push(user);
+    }
+    db.saveDataToDisk();
+    resolve();
+  });
+}
+
+export function getDbUserByEmail(email: string): Promise<any | null> {
+  return new Promise((resolve) => {
+    const db = getDb() as any;
+    if (!db.data.users) db.data.users = [];
+    const found = db.data.users.find((u: any) => u.email === email);
+    resolve(found || null);
+  });
+}
+

@@ -122,6 +122,12 @@ export default function GuiaDeVoz({
       label: "Cenário MME",
       text: SPEECH_GUIDES.mme_scenario || "Cenário especial MME ativo.",
       icon: "🧪"
+    },
+    {
+      key: "empresas_rj",
+      label: "Empresas RJ",
+      text: (SPEECH_GUIDES as any).empresas_rj ? (SPEECH_GUIDES as any).empresas_rj(selic) : "Análise de viabilidade das empresas do Rio de Janeiro.",
+      icon: "🏢"
     }
   ];
 
