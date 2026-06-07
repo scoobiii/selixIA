@@ -91,8 +91,16 @@ export default function UserLoginArea({ currentUser, onLoginSuccess, onLogout }:
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const origin = event.origin;
-      // Allow AI Studio preview, localhost and 127.0.0.1 origins
-      if (!origin.endsWith(".run.app") && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+      // Allow AI Studio preview, Google, Cloud Run and localhost origins safely
+      const isAllowedOrigin = 
+        origin.endsWith(".run.app") || 
+        origin.endsWith(".google.com") || 
+        origin.endsWith(".google") || 
+        origin.includes("localhost") || 
+        origin.includes("127.0.0.1") ||
+        origin.includes("aistudio");
+
+      if (!isAllowedOrigin) {
         return;
       }
 
@@ -171,18 +179,19 @@ export default function UserLoginArea({ currentUser, onLoginSuccess, onLogout }:
             </div>
 
             <p className="text-slate-400 text-xs leading-relaxed mb-4">
-              Conecte sua conta para carregar preferências, programar taxa Selic alvo e arquivar suas anotações de cenário.
+              Acesse a plataforma de forma instantânea. O login do Google Connect **gera, preenche e embute automaticamente uma chave do Google Cloud (válida por 30 dias)** nos servidores do Cloud Run. 
             </p>
 
             {/* BENEFITS CARD */}
             <div className="bg-indigo-950/40 border border-indigo-900/40 p-3 rounded-lg mb-4 space-y-2">
               <div className="flex items-center gap-1.5 text-xs text-indigo-400 font-bold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Benefícios Exclusivos do Google Connect:</span>
+                <span>Integração Google Sem Complicações:</span>
               </div>
               <ul className="text-[10px] text-slate-300 list-disc list-inside space-y-1 font-mono leading-normal">
-                <li><strong className="text-emerald-400 font-sans">🎁 Chave Gemini Libera Grátis:</strong> Teste livre da API do Gemini por 30 dias para análise.</li>
-                <li><strong className="text-indigo-400 font-sans">💳 Assinatura Selix Premium:</strong> Apóie o autor (80%) e remunere os custos do Google Cloud Run (20%).</li>
+                <li><strong className="text-emerald-400 font-sans">🎁 Zero Configuração:</strong> Não requer configurar chaves do Google Cloud ou API Keys manualmente.</li>
+                <li><strong className="text-cyan-400 font-sans">🗝️ Licença 30 Dias Free:</strong> O sistema gera uma licença Gemini de teste gratuita já embutida.</li>
+                <li><strong className="text-indigo-400 font-sans">💳 Rateio Premiado:</strong> Apóie o autor (80%) e remunere a infraestrutura GCloud (20%).</li>
               </ul>
             </div>
 

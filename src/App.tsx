@@ -65,6 +65,9 @@ export default function App() {
         const data = await res.json();
         if (data.user) {
           setCurrentUser(data.user);
+          // Auto-synchronize browser cache with official profile values
+          if (data.user.name) localStorage.setItem("selix_user_name", data.user.name);
+          if (data.user.picture) localStorage.setItem("selix_user_picture", data.user.picture);
         }
       }
     } catch (err) {

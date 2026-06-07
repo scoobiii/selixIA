@@ -322,11 +322,23 @@ app.post("/api/auth/profile", async (req, res) => {
         }
       };
       await saveDbUser(existingUser);
-    } else if (customizations) {
-      existingUser.customizations = { ...existingUser.customizations, ...customizations };
-      if (name) existingUser.name = name;
-      if (picture) existingUser.picture = picture;
-      await saveDbUser(existingUser);
+    } else {
+      let isChanged = false;
+      if (customizations) {
+        existingUser.customizations = { ...existingUser.customizations, ...customizations };
+        isChanged = true;
+      }
+      if (name && existingUser.name !== name) {
+        existingUser.name = name;
+        isChanged = true;
+      }
+      if (picture && existingUser.picture !== picture) {
+        existingUser.picture = picture;
+        isChanged = true;
+      }
+      if (isChanged) {
+        await saveDbUser(existingUser);
+      }
     }
 
     res.json({ success: true, user: existingUser });
