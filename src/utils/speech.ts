@@ -5,10 +5,31 @@
 
 let isMutedGlobal = false;
 
+type SpeechListener = (speaking: boolean, text: string) => void;
+const speechListeners = new Set<SpeechListener>();
+
+export function subscribeSpeech(listener: SpeechListener) {
+  speechListeners.add(listener);
+  return () => {
+    speechListeners.delete(listener);
+  };
+}
+
+function notifySpeech(speaking: boolean, text: string) {
+  speechListeners.forEach(l => {
+    try {
+      l(speaking, text);
+    } catch (e) {
+      console.error("Speech listener error:", e);
+    }
+  });
+}
+
 export function setMuteState(muted: boolean) {
   isMutedGlobal = muted;
   if (muted && typeof window !== "undefined" && window.speechSynthesis) {
     window.speechSynthesis.cancel();
+    notifySpeech(false, "");
   }
 }
 
@@ -37,13 +58,18 @@ export function speak(text: string, force = false, onStart?: () => void, onEnd?:
   utterance.rate = 1.05;
   utterance.pitch = 1.0;
 
-  if (onStart) {
-    utterance.onstart = () => onStart();
-  }
-  if (onEnd) {
-    utterance.onend = () => onEnd();
-    utterance.onerror = () => onEnd();
-  }
+  utterance.onstart = () => {
+    notifySpeech(true, text);
+    if (onStart) onStart();
+  };
+
+  const handleEnd = () => {
+    notifySpeech(false, "");
+    if (onEnd) onEnd();
+  };
+
+  utterance.onend = handleEnd;
+  utterance.onerror = handleEnd;
 
   // Try to find a nice female/male Portuguese assistant voice
   const voices = window.speechSynthesis.getVoices();
@@ -58,6 +84,7 @@ export function speak(text: string, force = false, onStart?: () => void, onEnd?:
 export function cancelSpeech() {
   if (typeof window !== "undefined" && window.speechSynthesis) {
     window.speechSynthesis.cancel();
+    notifySpeech(false, "");
   }
 }
 

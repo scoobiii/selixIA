@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { User, LogIn, LogOut, Key, Mail, Shield, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
+import { User, LogIn, LogOut, Key, Mail, Shield, AlertCircle, Sparkles, RefreshCw, Volume2 } from "lucide-react";
+import { speak } from "../utils/speech";
 
 interface UserLoginAreaProps {
   currentUser: any | null;
@@ -17,6 +18,13 @@ export default function UserLoginArea({ currentUser, onLoginSuccess, onLogout }:
   const [emailInput, setEmailInput] = useState("");
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSpeakLoginIntro = () => {
+    speak(
+      "Central de Autenticação e Gestão de Chaves de Acesso Selix. Conecte sua conta do Google de forma descomplicada para herdar automaticamente uma licença de uso do Gemini de trinta dias desenvolvida para faturamento das assinaturas. O sistema sincroniza de forma segura as suas preferências de taxas Selic e anotações financeiras no banco de dados local.",
+      true
+    );
+  };
 
   // Handle Google OAuth Popup
   const handleGoogleConnect = async () => {
@@ -166,7 +174,17 @@ export default function UserLoginArea({ currentUser, onLoginSuccess, onLogout }:
                   <User className="w-4 h-4" />
                 </span>
                 <div>
-                  <h3 className="font-bold text-slate-100 font-sans text-sm">Central de Autenticação</h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-slate-100 font-sans text-sm">Central de Autenticação</h3>
+                    <button
+                      type="button"
+                      onClick={handleSpeakLoginIntro}
+                      className="p-1 rounded hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer"
+                      title="Ouvir explicação por voz"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                   <p className="text-[8px] text-slate-500 font-mono uppercase tracking-wider">Acesso ao Banco de Dados JSON</p>
                 </div>
               </div>

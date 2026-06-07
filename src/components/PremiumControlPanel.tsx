@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Sliders, Save, Palette, RefreshCw, CheckCircle, SlidersHorizontal, BookOpen, AlertCircle, Sparkles, CreditCard, Heart } from "lucide-react";
+import { Sliders, Save, Palette, RefreshCw, CheckCircle, SlidersHorizontal, BookOpen, AlertCircle, Sparkles, CreditCard, Heart, Volume2 } from "lucide-react";
+import { speak } from "../utils/speech";
 
 interface PremiumControlPanelProps {
   currentUser: any;
@@ -22,6 +23,13 @@ export default function PremiumControlPanel({ currentUser, onUpdateCustomization
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSpeakOverview = () => {
+    speak(
+      `Painel do Investidor Selix Premium. Conectado ao e-mail ${currentUser.email}. Este painel permite ajustar de forma tática a meta desejada da taxa Selic de juros para o simulador de companhias em recuperação judicial do Rio de Janeiro. Além disso, gerencie a sensibilidade do watchdog térmico e salve notas especiais e cenários personalizados diretamente no banco de dados. Conta também com simulação contratual e rateio transparente de receitas.`,
+      true
+    );
+  };
 
   // Sync state with incoming user object changes
   useEffect(() => {
@@ -78,6 +86,14 @@ export default function PremiumControlPanel({ currentUser, onUpdateCustomization
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-slate-100 font-sans text-sm">Painel do Investidor: Configurações Premium</h3>
+              <button
+                type="button"
+                onClick={handleSpeakOverview}
+                className="p-1 rounded hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer"
+                title="Narrar explicação deste painel premium por voz"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+              </button>
               <span className="text-[8px] bg-indigo-950 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-full font-mono font-bold uppercase tracking-wider">
                 Membro Sincronizado
               </span>

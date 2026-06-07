@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { Send, Sparkles, Cpu, AlertTriangle, MessageSquare, CornerDownLeft, Volume2 } from "lucide-react";
 import { speak, SPEECH_GUIDES } from "../utils/speech";
+import SelixAvatar from "./SelixAvatar";
 
 interface Message {
   role: "user" | "assistant";
@@ -68,7 +69,7 @@ export default function ConsolaAnalista({ onSendMessage, isPending }: ConsolaAna
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col gap-4 relative overflow-hidden h-[540px]" id="financial-copilot">
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl flex flex-col gap-4 relative overflow-hidden h-[680px]" id="financial-copilot">
       <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full" />
       
       <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
@@ -90,6 +91,9 @@ export default function ConsolaAnalista({ onSendMessage, isPending }: ConsolaAna
           <p className="text-3xs text-slate-500 font-mono">SUPORTE COGNITIVO COM MOTOR GEMINI 3.5-FLASH</p>
         </div>
       </div>
+
+      {/* Selix Interactive Robot Avatar */}
+      <SelixAvatar />
 
       {apiKeyMissingNotice && (
         <div className="bg-amber-950/40 border border-amber-500/30 rounded p-2.5 text-3xs font-mono text-amber-300 flex items-start gap-2 select-none" id="api-key-notice">

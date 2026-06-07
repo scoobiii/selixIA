@@ -30,7 +30,7 @@ export const REGIONAL_TENANTS: Record<LocaleType, TenantConfig> = {
     taxRatePercent: 9.25, // Consonant with the MME green-blend target!
     currency: "BRL",
     currencySymbol: "R$",
-    allowedProviders: ["pix", "stripe", "mercado_pago"],
+    allowedProviders: ["pix", "stripe", "google_pay", "mercado_pago"],
   },
   "en-US": {
     id: "tenant-us-globalcorp",
@@ -42,7 +42,7 @@ export const REGIONAL_TENANTS: Record<LocaleType, TenantConfig> = {
     taxRatePercent: 6.5,
     currency: "USD",
     currencySymbol: "$",
-    allowedProviders: ["stripe", "paypal", "crypto"],
+    allowedProviders: ["stripe", "paypal", "google_pay", "crypto"],
   },
   "es-ES": {
     id: "tenant-es-eurozone",
@@ -54,7 +54,7 @@ export const REGIONAL_TENANTS: Record<LocaleType, TenantConfig> = {
     taxRatePercent: 21.0,
     currency: "EUR",
     currencySymbol: "€",
-    allowedProviders: ["stripe", "paypal", "crypto"],
+    allowedProviders: ["stripe", "paypal", "google_pay", "crypto"],
   }
 };
 
@@ -99,6 +99,7 @@ export const TRANSLATIONS: Record<LocaleType, Record<string, string>> = {
     "pixButton": "PIX Instantâneo (Via Banco Central do Brasil)",
     "cryptoButton": "Stablecoins Crypto (USDT / USDC via Web3)",
     "paypalButton": "PayPal Global Wallet",
+    "googlePayButton": "Carteira Google (Google Pay / Wallet)",
     "mpButton": "Carteira Digital Mercado Pago",
     
     // Payment Status states
@@ -159,6 +160,7 @@ export const TRANSLATIONS: Record<LocaleType, Record<string, string>> = {
     "pixButton": "PIX Instant Credit (Zero Friction - Brazil)",
     "cryptoButton": "Distributed Stablecoins (USDC / USDT Web3)",
     "paypalButton": "PayPal Electronic Wallet",
+    "googlePayButton": "Google Wallet / Pay Integration",
     "mpButton": "Mercado Pago Digital Checkout",
     
     "pixQrDesc": "Scan this dynamic QR Code strictly validated by Banco Central do Brasil. Zero clearing time.",
@@ -217,6 +219,7 @@ export const TRANSLATIONS: Record<LocaleType, Record<string, string>> = {
     "pixButton": "PIX Instantáneo (Banco Central do Brasil)",
     "cryptoButton": "Monedas Estables Seguras (USDC / USDT Multi-Chain)",
     "paypalButton": "Monedero PayPal Internacional",
+    "googlePayButton": "Billetera Google / Google Pay",
     "mpButton": "Pasarela Local Mercado Pago",
     
     "pixQrDesc": "Escanee el código QR dinámico verificado para transferencias instantáneas directas desde el Banco Central do Brasil.",
@@ -312,7 +315,7 @@ export class DynamicBillingOrchestrator {
     const txId = `${providerId}_tx_sim_${Math.random().toString(36).substring(2, 10)}`;
     const mockAmountStr = req.amount.toFixed(2).replace(".", "");
     return {
-      providerName: providerId === "pix" ? "Pix Banco Central (Local)" : `${providerId} Gateway`,
+      providerName: providerId === "pix" ? "Pix Banco Central (Local)" : providerId === "google_pay" ? "Carteira Google (Google Wallet)" : `${providerId} Gateway`,
       transactionId: txId,
       status: "pending",
       visualPayload: providerId === "pix" ? {

@@ -20,7 +20,7 @@ interface BlueskySimProps {
   currentSelic: number;
   currentSentiment: number;
   isGeneratingThread: boolean;
-  onGenerateThreadAI: () => Promise<string[] | null>;
+  onGenerateThreadAI: (overridePersona?: string) => Promise<string[] | null>;
 }
 
 export default function BlueskySim({
@@ -38,6 +38,7 @@ export default function BlueskySim({
   const [post3, setPost3] = useState("");
   const [activeTab, setActiveTab] = useState<"FEED" | "COMPOSER" | "SCHEDULER">("FEED");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [selectedAudience, setSelectedAudience] = useState<string>("jornalista");
 
   // Scheduler-related state representing server daemon sync
   const [schedulerState, setSchedulerState] = useState<any>(null);
@@ -144,7 +145,7 @@ export default function BlueskySim({
 
   // Trigger Gemini AI generation
   const handleAIGenerate = async () => {
-    const aiPosts = await onGenerateThreadAI();
+    const aiPosts = await onGenerateThreadAI(selectedAudience);
     if (aiPosts && aiPosts.length >= 2) {
       setPost1(aiPosts[0] || "");
       setPost2(aiPosts[1] || "");
@@ -238,14 +239,34 @@ export default function BlueskySim({
         </div>
 
         {/* AI Generate Prompt floating action */}
-        <button
-          onClick={handleAIGenerate}
-          disabled={isGeneratingThread}
-          className="text-3xs font-mono font-bold bg-sky-950 hover:bg-sky-900 border border-sky-400/30 hover:border-sky-400/60 text-sky-400 px-3 py-2 rounded transition-all flex items-center gap-1.5 select-none w-full sm:w-auto justify-center cursor-pointer"
-        >
-          <Sparkles className={`w-3.5 h-3.5 ${isGeneratingThread ? "animate-spin text-amber-400" : "text-sky-300"}`} />
-          {isGeneratingThread ? "GERANDO THREAD..." : "COMPOR COM GÊMINIS"}
-        </button>
+        <div className="flex flex-col gap-1 shrink-0 w-full sm:w-48 text-left">
+          <label className="text-[8px] text-slate-500 font-mono tracking-wider uppercase block select-none mb-1">
+            🎯 Público-Alvo:
+          </label>
+          <select
+            value={selectedAudience}
+            onChange={(e) => setSelectedAudience(e.target.value)}
+            className="bg-slate-900 text-slate-300 border border-slate-800 text-3xs px-2 py-1.5 rounded outline-none focus:border-sky-500 w-full font-mono cursor-pointer mb-1.5"
+            id="target-audience-dropdown-selector"
+          >
+            <option value="jornalista">Geral / Mídia Econômica 📰</option>
+            <option value="economista">COPOM & Monetaristas 🤵</option>
+            <option value="trabalhador">Classe Trabalhadora 🛒</option>
+            <option value="ambientalista">MME / Clima & Bioenergia 🌱</option>
+            <option value="empresario">Setor Produtivo / Indústria 🏭</option>
+            <option value="investidor">Traders de Brent & FX 🛢️</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={handleAIGenerate}
+            disabled={isGeneratingThread}
+            className="text-3xs font-mono font-bold bg-sky-950 hover:bg-sky-900 border border-sky-400/30 hover:border-sky-400/60 text-sky-400 px-3 py-1.5 rounded transition-all flex items-center gap-1.5 select-none w-full justify-center cursor-pointer"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isGeneratingThread ? "text-amber-400 animate-spin" : "text-sky-300"}`} />
+            {isGeneratingThread ? "GERANDO..." : "COMPOR COM GÊMINIS"}
+          </button>
+        </div>
       </div>
 
       {/* COMPOSER TAB NAVIGATION */}

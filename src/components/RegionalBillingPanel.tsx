@@ -7,12 +7,13 @@ import React, { useState, useEffect } from "react";
 import { 
   Globe, Languages, CreditCard, CheckCircle, Flame, ShieldCheck, 
   Layers, AlertTriangle, ChevronRight, RefreshCw, FileText, 
-  Building, Wallet, QrCode, Wifi, Clock, Sparkles, Copy, Trash2, Coins
+  Building, Wallet, QrCode, Wifi, Clock, Sparkles, Copy, Trash2, Coins, Volume2
 } from "lucide-react";
 import { 
   LocaleType, TenantConfig, REGIONAL_TENANTS, TRANSLATIONS, 
   DynamicBillingOrchestrator, formatLocaleTimezone, autoDetectUserGeoLocale
 } from "../utils/billingAndI18n";
+import { speak } from "../utils/speech";
 
 interface RegionalBillingPanelProps {
   onLanguageChange: (locale: LocaleType) => void;
@@ -40,6 +41,25 @@ export default function RegionalBillingPanel({
   const [checkoutResult, setCheckoutResult] = useState<any | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<"none" | "pending" | "success" | "failed">("none");
   const [copyFeedback, setCopyFeedback] = useState<boolean>(false);
+  
+  // Dynamic scaling model based on 5% profit allocation
+  const [totalRevenue, setTotalRevenue] = useState<number>(() => {
+    const saved = localStorage.getItem("selix_simulated_revenue");
+    return saved ? Number(saved) : 8940.00; // default starting simulated revenue
+  });
+  const [activeGooglePayTab, setActiveGooglePayTab] = useState<"pay" | "code">("pay");
+
+  const handleSpeakBillingIntro = () => {
+    speak(
+      `Painel de Faturamento Regional Selix sob receita acumulada de ${totalRevenue.toFixed(2)} reais. Selecione um locatário de faturamento e configure seu meio de pagamento, incluindo PIX instantâneo nacional brasileiro, cartões Stripe ou Carteira Google, Google Pay para faturamento sob demanda. Veja abaixo em tempo real o cálculo matemático de alocação de cinco por cento da receita para expansão automatizada de memória RAM e expansão de capacidade hardware!`,
+      true
+    );
+  };
+
+  // Keep simulated revenue persisted in client storage
+  useEffect(() => {
+    localStorage.setItem("selix_simulated_revenue", String(totalRevenue));
+  }, [totalRevenue]);
   
   // Credit card mockup inputs
   const [cardNumber, setCardNumber] = useState<string>("4000 1234 5678 9010");
@@ -132,6 +152,7 @@ export default function RegionalBillingPanel({
     const res = await orchestrator.confirmCheckout(txId, email);
     if (res.success) {
       setPaymentStatus("success");
+      setTotalRevenue(prev => prev + billingPlanAmount);
       onAddLog(
         `Sucesso Fiscal: Transação ${txId} liquidada no Gateway ${checkoutResult?.providerName || "Selix Gateway"}. Plano PREMIUM PRO liberado com sucesso para ${email}!`,
         "SUCCESS",
@@ -172,9 +193,19 @@ export default function RegionalBillingPanel({
             <Globe className="w-4 h-4 animate-spin-slow" />
           </span>
           <div>
-            <h2 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider block">
-              {t["panelTitle"]}
-            </h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider block">
+                {t["panelTitle"]}
+              </h2>
+              <button
+                type="button"
+                onClick={handleSpeakBillingIntro}
+                className="p-1 rounded hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 transition-all cursor-pointer"
+                title="Ouvir explicação do faturamento regional por voz"
+              >
+                <Volume2 className="w-3 h-3" />
+              </button>
+            </div>
             <div className="text-4xs text-slate-500 font-mono">
               {t["panelSub"]}
             </div>
@@ -473,6 +504,16 @@ export default function RegionalBillingPanel({
                       </button>
                     )}
 
+                    {currentTenant.allowedProviders.includes("google_pay") && (
+                      <button
+                        onClick={() => handleInitiateCheckout("google_pay")}
+                        className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-violet-500/40 text-violet-400 font-mono text-[9px] flex flex-col items-center justify-center gap-1 h-14 cursor-pointer text-center"
+                      >
+                        <Wallet className="w-4 h-4 text-violet-400" />
+                        <span>{t["googlePayButton"]}</span>
+                      </button>
+                    )}
+
                     {currentTenant.allowedProviders.includes("paypal") && (
                       <button
                         onClick={() => handleInitiateCheckout("paypal")}
@@ -617,6 +658,120 @@ export default function RegionalBillingPanel({
                   </div>
                 )}
 
+                {selectedProvider === "google_pay" && (
+                  <div className="space-y-4 font-sans text-xs animate-fade-in text-slate-350">
+                    <div className="bg-slate-950 p-3 rounded border border-slate-850 flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-1.5 font-mono text-3xs">
+                        <Wallet className="w-4 h-4 text-violet-400 font-bold animate-pulse" />
+                        <span className="uppercase text-slate-200">Google Pay & Google Wallet API</span>
+                      </div>
+                      <div className="flex gap-1 bg-slate-905 p-0.5 rounded border border-slate-800 font-mono text-[8px]">
+                        <button
+                          type="button"
+                          onClick={() => setActiveGooglePayTab("pay")}
+                          className={`px-1.5 py-0.5 rounded transition ${activeGooglePayTab === "pay" ? "bg-violet-950 text-violet-355 font-bold border border-violet-900/40" : "text-slate-500 hover:text-slate-300"}`}
+                        >
+                          📱 SIMULAÇÃO
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveGooglePayTab("code")}
+                          className={`px-1.5 py-0.5 rounded transition ${activeGooglePayTab === "code" ? "bg-violet-950 text-violet-355 font-bold border border-violet-900/40" : "text-slate-500 hover:text-slate-300"}`}
+                        >
+                          📋 CODIGO EXEMPLO
+                        </button>
+                      </div>
+                    </div>
+
+                    {activeGooglePayTab === "pay" ? (
+                      <div className="space-y-3">
+                        <p className="text-3xs text-slate-400 leading-relaxed font-sans">
+                          Para receber dos assinantes usando a **Google Wallet (Carteira Google)**, seu frontend invoca o SDK do Google Pay. O usuário aprova com biometria no celular e o Google disponibiliza um token criptográfico seguro que é liquidado em segundos pela sua adquirente credenciada (Stripe, MercadoPago, Adyen ou outra).
+                        </p>
+                        
+                        <div className="bg-slate-950 p-4 rounded-lg border border-slate-855 max-w-sm mx-auto text-center space-y-3.5">
+                          <span className="text-[7px] font-mono text-slate-550 block uppercase tracking-widest">GOOGLE PAY SECURE COMPLIANCE ENVIRONMENT</span>
+                          
+                          {/* Standard high-fidelity mock Google Pay Button inside simulated app */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onAddLog("Google Pay: Autenticação de biometria / FaceID requisitada...", "INFO", "SYSTEM");
+                              setTimeout(() => {
+                                onAddLog("Google Pay: Token criptográfico (PaymentData) gerado com sucesso por secure-enclave do Android.", "SUCCESS", "SYSTEM");
+                                onAddLog("Google Pay: Token enviado de forma segura para faturamento.", "INFO", "SYSTEM");
+                                handleTriggerPaymentSuccess();
+                              }, 1200);
+                            }}
+                            className="w-full bg-black hover:bg-slate-900 text-white font-sans font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 border border-slate-800 transition-all cursor-pointer shadow-lg active:scale-95"
+                          >
+                            <span className="text-xs tracking-tight font-extrabold uppercase">PAGAR COM O</span>
+                            <span className="font-mono text-sm tracking-tighter bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 bg-clip-text text-transparent font-black">Google Pay</span>
+                          </button>
+                          
+                          <div className="text-[8px] text-slate-500 leading-normal font-sans">
+                            Clique acima para simular a biometria do dispositivo do usuário e receber o pagamento instantaneamente.
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 animate-fade-in">
+                        <p className="text-3xs text-slate-400 font-sans leading-relaxed">
+                          Abaixo está o trecho oficial de código TypeScript React para renderizar o botão e escutar a emissão de tokens. Use este bloco em seu app real para integrar a Carteira Google:
+                        </p>
+                        <div className="bg-slate-950 p-3 rounded font-mono text-[8px] border border-slate-855 text-slate-300 overflow-x-auto whitespace-pre leading-normal max-h-[190px]">
+{`// Código React - Google Pay Integration
+import GooglePayButton from '@google-pay/button-react';
+
+export function GoogleWalletPayment() {
+  return (
+    <GooglePayButton
+      environment="TEST" // Troque para "PRODUCTION" em produção
+      buttonColor="black"
+      buttonType="subscribe" // Otimizado para assinaturas recorrentes
+      paymentRequest={{
+        apiVersion: 2,
+        apiVersionMinor: 0,
+        allowedPaymentMethods: [{
+          type: 'CARD',
+          parameters: {
+            allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3D_S'],
+            allowedCardNetworks: ['MASTERCARD', 'VISA', 'AMEX']
+          },
+          tokenizationSpecification: {
+            type: 'PAYMENT_GATEWAY',
+            parameters: {
+              'gateway': 'stripe', // Seu gateway de pagamentos
+              'stripe:version': '2018-08-23',
+              'stripe:publishableKey': 'pk_live_...'
+            }
+          }
+        }],
+        merchantInfo: {
+          merchantId: 'BCR2DN6TVW5...', // ID do Console Google Pay
+          merchantName: 'Selix Bio-Tech'
+        },
+        transactionInfo: {
+          totalPriceStatus: 'FINAL',
+          totalPriceLabel: 'Assinatura Anual Selix PRO',
+          totalPrice: '149.00',
+          currencyCode: 'BRL',
+          countryCode: 'BR'
+        }
+      }}
+      onLoadPaymentData={paymentRequest => {
+        console.log('Token do Google Pay gerado:', paymentRequest.paymentMethodData);
+        // Envie o token formatado para o seu backend (/api/billing/confirm)
+      }}
+    />
+  );
+}`}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedProvider === "paypal" && (
                   <div className="space-y-3 font-sans text-[10px] animate-fade-in text-slate-400">
                     <p>Você é redirecionado para a carteira eletrônica direta do PayPal (PayPal Express Sandbox Link para {currentTenant.currency}):</p>
@@ -686,6 +841,116 @@ export default function RegionalBillingPanel({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 4: 5% REINVESTMENT AUTO-SCALING ALIGNMENT MODEL */}
+      <div className="border-t border-slate-800 pt-5 mt-5 space-y-4 font-mono text-3xs rounded-xl bg-slate-950/40 p-4 border border-indigo-950/20" id="infra-profit-tracker">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-950/30 pb-2">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 text-emerald-400 animate-spin-slow animate-spin" />
+            <div>
+              <h3 className="font-extrabold text-slate-100 uppercase tracking-widest text-3xs">
+                📈 MODELO FINANCEIRO DE REINVESTIMENTO (5% DO LUCRO EM AUTO-SCALING)
+              </h3>
+              <p className="text-[9px] text-slate-500 font-sans mt-0.5 leading-none">
+                Alocação contínua de margem de receita de assinaturas para fomento de hardware dedicado e escalabilidade do Core Selix.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[9px] text-slate-400 uppercase">Fundo de Infra (5%):</span>
+            <strong className="text-sm text-emerald-400 font-black">
+              R$ {(totalRevenue * 0.05).toFixed(2)}
+            </strong>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+          {/* Item 1: Watchdog Memory Bounds */}
+          <div className="bg-slate-900/60 p-3 rounded border border-slate-800 space-y-1.5">
+            <div className="flex justify-between items-center text-slate-500 text-[8px] uppercase font-bold">
+              <span>Capacidade de RAM Watchdog</span>
+              <span className="text-emerald-400 font-bold">Auto-Scale</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <strong className="text-base text-slate-200">
+                {(384 + Math.round((totalRevenue * 0.05) * 0.15))} MB
+              </strong>
+              <span className="text-slate-550 line-through text-[9px] ml-1.5">384 MB</span>
+            </div>
+            <p className="text-[8.5px] text-slate-500 font-sans leading-tight">
+              Aumento dinâmico do limite de RAM do container/Termux para prevenção de incidentes de OOM (Out Of Memory) sob regime de estresse de dados.
+            </p>
+          </div>
+
+          {/* Item 2: Background Browser Nodes */}
+          <div className="bg-slate-900/60 p-3 rounded border border-slate-800 space-y-1.5">
+            <div className="flex justify-between items-center text-slate-500 text-[8px] uppercase font-bold">
+              <span>Browser Nodes em Paralelo</span>
+              <span className="text-sky-400 font-bold">Auto-Scale</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <strong className="text-base text-slate-200">
+                {1 + Math.floor((totalRevenue * 0.05) / 25)} nodes
+              </strong>
+              <span className="text-slate-550 line-through text-[9px] ml-1.5">1 node</span>
+            </div>
+            <p className="text-[8.5px] text-slate-500 font-sans leading-tight">
+              Sessões simultâneas ativas com headless chromium para raspagem autônoma de mercado (Brent Oil e COPOM) sem enfileiramento ou latência.
+            </p>
+          </div>
+
+          {/* Item 3: Concurrent API Requests */}
+          <div className="bg-slate-900/60 p-3 rounded border border-slate-800 space-y-1.5">
+            <div className="flex justify-between items-center text-slate-500 text-[8px] uppercase font-bold">
+              <span>Requisições Simultâneas</span>
+              <span className="text-violet-400 font-bold">Auto-Scale</span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <strong className="text-base text-slate-200">
+                {(150 + Math.round((totalRevenue * 0.05) * 0.8))} req/s
+              </strong>
+              <span className="text-slate-550 line-through text-[9px] ml-1.5">150/s</span>
+            </div>
+            <p className="text-[8.5px] text-slate-500 font-sans leading-tight">
+              Capacidade do balanceador de rede regional para absorver alta concorrência de acessos aos endpoints de RAG e threads sem degradação do TTFB.
+            </p>
+          </div>
+        </div>
+
+        {/* Action simulators to test live scaling */}
+        <div className="bg-slate-900/40 p-3.5 rounded border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[10px]">
+          <div className="flex items-center gap-2 text-slate-400 font-sans">
+            <span className="p-1 rounded bg-slate-950 font-mono text-[9px] text-emerald-400 border border-emerald-900/30">
+              📊 RECEITA ACUMULADA: R$ {totalRevenue.toFixed(2)}
+            </span>
+            <span>Simule novos cadastros para ver as metas de crescimento financeiro expandirem os limites físicos de hardware.</span>
+          </div>
+          
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setTotalRevenue(prev => prev + 149.00);
+                onAddLog(`Simulação Interna: Nova assinatura agregada (+ R$ 149,00). 5% (R$ 7,45) direcionado a fundos de capacidade hardware.`, "SUCCESS", "SYSTEM");
+              }}
+              className="px-3.5 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold font-mono text-[9px] uppercase transition-all flex items-center gap-1 cursor-pointer select-none grow sm:grow-0 text-center justify-center border border-indigo-500/25 active:scale-95"
+            >
+              ➕ SIMULAR CADASTRO (+R$149)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTotalRevenue(8940.00);
+                onAddLog(`Simulação Interna: Reservas de infraestrutura reiniciadas para o patamar nominal pré-autônomo.`, "WARNING", "SYSTEM");
+              }}
+              className="p-1.5 rounded bg-slate-950 border border-slate-800 hover:text-white cursor-pointer select-none"
+              title="Reiniciar faturamento simulado"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 animate-spin" />
+            </button>
           </div>
         </div>
       </div>

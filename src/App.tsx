@@ -455,9 +455,10 @@ export default function App() {
   };
 
   // Generate newly formatted economic economic thread with server-side Gemini
-  const handleGenerateThreadAI = async (): Promise<string[] | null> => {
+  const handleGenerateThreadAI = async (overridePersona?: string): Promise<string[] | null> => {
     setIsThreadGenerating(true);
-    const pConfig = SELIX_PERSONAS.find(p => p.id === activePersona) || SELIX_PERSONAS[0];
+    const selectedPersonaId = overridePersona || activePersona;
+    const pConfig = SELIX_PERSONAS.find(p => p.id === selectedPersonaId) || SELIX_PERSONAS[0];
     try {
       const prompt = `Você é um analista agindo estritamente do ponto de vista do perfil '${pConfig.name}'. 
 Slogan do Perfil: ${pConfig.slogan}
