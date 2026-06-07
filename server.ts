@@ -8,7 +8,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
-import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices, addWaitlistEntry, getWaitlistEntries, saveDbUser, getDbUserByEmail } from "./src/db/database";
+import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices, addWaitlistEntry, getWaitlistEntries, saveDbUser, getDbUserByEmail, getRJStats, saveRJStats } from "./src/db/database";
 
 dotenv.config();
 
@@ -352,6 +352,7 @@ app.get("/api/state", async (req, res) => {
     const dbBrent = await getHistoricalPrices("brent", 30);
     const dbTtf = await getHistoricalPrices("ttf", 30);
     const dbSelic = await getHistoricalPrices("selic", 30);
+    const rjStats = await getRJStats();
 
     const brentHistoryList = dbBrent.length > 0 ? dbBrent.map(r => r.price) : brentHistory;
     const ttfHistoryList = dbTtf.length > 0 ? dbTtf.map(r => r.price) : ttfHistory;
@@ -388,6 +389,7 @@ app.get("/api/state", async (req, res) => {
       brentHistory: brentHistoryList,
       ttfHistory: ttfHistoryList,
       rjPrices,
+      rjStats,
       simultaneousUsers: currentSimultaneousUsers,
       maxAllowedUsers: maxAllowedUsers,
       system: {
@@ -408,6 +410,17 @@ app.get("/api/state", async (req, res) => {
       bhia3: 6.20,
       raiz4: 2.15
     };
+    let rjStatsDefault = {
+      totalRjCompanies: 1904,
+      totalPlrRetained: 3200000000,
+      releaseBill: "PL 4363/2021",
+      billAuthor: "Deputado federal Bohn Gass (PT-RS)",
+      lastUpdated: new Date().toISOString().split("T")[0]
+    };
+    try {
+      rjStatsDefault = await getRJStats();
+    } catch (_) {}
+
     res.json({
       brent: parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
@@ -418,6 +431,7 @@ app.get("/api/state", async (req, res) => {
       brentHistory,
       ttfHistory,
       rjPrices: rjPricesDefault,
+      rjStats: rjStatsDefault,
       simultaneousUsers: currentSimultaneousUsers,
       maxAllowedUsers: maxAllowedUsers,
       system: {
@@ -473,6 +487,23 @@ app.post("/api/state/update", async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to update SQLite historical state" });
+  }
+});
+
+app.post("/api/state/update-rj-stats", async (req, res) => {
+  const { totalRjCompanies, totalPlrRetained, releaseBill, billAuthor } = req.body;
+  try {
+    const updatePayload: any = {};
+    if (totalRjCompanies !== undefined) updatePayload.totalRjCompanies = parseInt(totalRjCompanies);
+    if (totalPlrRetained !== undefined) updatePayload.totalPlrRetained = parseFloat(totalPlrRetained);
+    if (releaseBill !== undefined) updatePayload.releaseBill = releaseBill;
+    if (billAuthor !== undefined) updatePayload.billAuthor = billAuthor;
+
+    await saveRJStats(updatePayload);
+    const updatedStats = await getRJStats();
+    res.json({ success: true, rjStats: updatedStats });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update RJ stats in SQLite" });
   }
 });
 

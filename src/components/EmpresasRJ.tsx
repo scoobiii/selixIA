@@ -21,12 +21,37 @@ interface EmpresasRJProps {
   currentSelic: number;
   defaultProjectedSelic?: number;
   rjPrices?: Record<string, number>;
+  rjStats?: {
+    totalRjCompanies: number;
+    totalPlrRetained: number;
+    releaseBill: string;
+    billAuthor: string;
+    lastUpdated: string;
+  };
+  onUpdateRjStats?: (updatedPayload: any) => Promise<void>;
 }
 
-export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPrices }: EmpresasRJProps) {
+export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPrices, rjStats, onUpdateRjStats }: EmpresasRJProps) {
   // Single-digit Selic target projection (defaulting to 9.00%)
   const [projectedSelic, setProjectedSelic] = useState(defaultProjectedSelic || 9.00);
   const [showSensitivityHelper, setShowSensitivityHelper] = useState(false);
+  
+  // Local edit states
+  const [isEditingStats, setIsEditingStats] = useState(false);
+  const [inputTotalCompanies, setInputTotalCompanies] = useState("1904");
+  const [inputTotalPlr, setInputTotalPlr] = useState("3200000000");
+  const [inputBill, setInputBill] = useState("PL 4363/2021");
+  const [inputAuthor, setInputAuthor] = useState("Deputado federal Bohn Gass (PT-RS)");
+
+  // Sync inputs with props when they arrive
+  React.useEffect(() => {
+    if (rjStats) {
+      setInputTotalCompanies(String(rjStats.totalRjCompanies ?? 1904));
+      setInputTotalPlr(String(rjStats.totalPlrRetained ?? 3200000000));
+      setInputBill(rjStats.releaseBill ?? "PL 4363/2021");
+      setInputAuthor(rjStats.billAuthor ?? "Deputado federal Bohn Gass (PT-RS)");
+    }
+  }, [rjStats]);
 
   // Sync projected Selic state when prop changes
   React.useEffect(() => {
@@ -220,6 +245,151 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
             Cada empresa possui um perfil de dívida estruturada. Empresas em regime crítico como <strong>AMER3</strong> ou <strong>LIGT3</strong> têm altíssima alavancagem (Sensibilidade); menores taxas geram uma amortização e valorização abrupta decorrente do alívio direto de debêntures.
           </div>
         )}
+      </div>
+
+      {/* SECTION: ESTATÍSTICA DE RECUPERAÇÃO JUDICIAL & PLR RETIDO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5" id="plr-analytical-panel">
+        
+        {/* Card 1: Estatísticas Gerais de R.J. e PLR */}
+        <div className="bg-slate-950 border border-slate-850 rounded-lg p-4 font-mono text-2xs space-y-3 relative overflow-hidden" id="plr-general-card">
+          <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+            <div className="flex items-center gap-1.5 text-amber-500 font-bold">
+              <Landmark className="w-4 h-4 text-amber-400" />
+              <span>PAINEL NACIONAL DE RECUPERAÇÃO (PLR RETIDO)</span>
+            </div>
+            <span className="text-[8px] bg-indigo-950 text-indigo-400 border border-indigo-900 px-1 rounded font-black">
+              CRAWLER DATA
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="bg-slate-900 p-2.5 rounded border border-slate-800" id="total-companies-val">
+              <span className="text-slate-550 text-[8px] uppercase block leading-none mb-1">Empresas em R.J. (Anual)</span>
+              <span className="text-sm font-bold text-slate-100">{parseFloat(inputTotalCompanies).toLocaleString('pt-BR')}</span>
+              <span className="text-[7px] text-slate-550 block mt-0.5">Fonte Oficial Serasa Experian</span>
+            </div>
+            <div className="bg-slate-900 p-2.5 rounded border border-slate-800" id="total-plr-val">
+              <span className="text-slate-550 text-[8px] uppercase block leading-none mb-1">PLR Trabalhista Retido</span>
+              <span className="text-sm font-bold text-rose-400">R$ {(parseFloat(inputTotalPlr) / 1000000000).toFixed(1)} Bi</span>
+              <span className="text-[7px] text-rose-500 block mt-0.5">Estimativa Ativo Suspenso</span>
+            </div>
+          </div>
+
+          <div className="bg-slate-900/60 p-2.5 rounded border border-slate-850 font-sans text-3xs text-slate-400 leading-relaxed">
+            Estimativas consolidadas apontam que, além do recorde de <strong>{parseFloat(inputTotalCompanies).toLocaleString('pt-BR')}</strong> pedidos de Recuperação Judicial em 2024, mais de <strong>R$ {(parseFloat(inputTotalPlr) / 1000000000).toFixed(1)} bilhões</strong> em Participações nos Lucros e Resultados (PLR) de trabalhadores estão bloqueados ou contestados nos planos de reestruturação das grandes corporações mapeadas.
+          </div>
+        </div>
+
+        {/* Card 2: Projeto de Lei e Trâmite Político */}
+        <div className="bg-slate-950 border border-slate-850 rounded-lg p-4 font-mono text-2xs space-y-3 relative overflow-hidden flex flex-col justify-between" id="release-bill-card">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-2">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                <span>PL DE LIBERAÇÃO & PROTEÇÃO DO PLR</span>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsEditingStats(!isEditingStats)} 
+                className="text-indigo-400 hover:text-indigo-300 text-4xs font-bold leading-none select-none bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 cursor-pointer"
+                id="edit-database-btn"
+              >
+                {isEditingStats ? "VOLTAR" : "EDITAR BANCO"}
+              </button>
+            </div>
+
+            {isEditingStats ? (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (onUpdateRjStats) {
+                  onUpdateRjStats({
+                    totalRjCompanies: parseInt(inputTotalCompanies) || 1904,
+                    totalPlrRetained: parseFloat(inputTotalPlr) || 3200000000,
+                    releaseBill: inputBill,
+                    billAuthor: inputAuthor
+                  });
+                }
+                setIsEditingStats(false);
+              }} className="space-y-2 pt-1 font-mono text-4xs" id="edit-database-form">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-500 block mb-0.5" htmlFor="total-rj-comp-input">EMPRESAS EM R.J.:</label>
+                    <input 
+                      id="total-rj-comp-input"
+                      type="number" 
+                      value={inputTotalCompanies} 
+                      onChange={(e) => setInputTotalCompanies(e.target.value)}
+                      className="bg-slate-900 border border-slate-755 text-slate-100 rounded px-1.5 py-0.5 w-full focus:outline-none focus:border-indigo-500 text-3xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-500 block mb-0.5" htmlFor="total-plr-ret-input">PLR RETIDA (R$):</label>
+                    <input 
+                      id="total-plr-ret-input"
+                      type="number" 
+                      value={inputTotalPlr} 
+                      onChange={(e) => setInputTotalPlr(e.target.value)}
+                      className="bg-slate-900 border border-slate-755 text-slate-100 rounded px-1.5 py-0.5 w-full focus:outline-none focus:border-indigo-500 text-3xs"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-slate-500 block mb-0.5" htmlFor="release-bill-input">PROJETO DE LEI (PL):</label>
+                    <input 
+                      id="release-bill-input"
+                      type="text" 
+                      value={inputBill} 
+                      onChange={(e) => setInputBill(e.target.value)}
+                      className="bg-slate-900 border border-slate-755 text-slate-100 rounded px-1.5 py-0.5 w-full focus:outline-none focus:border-indigo-500 text-3xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-500 block mb-0.5" htmlFor="bill-author-input">AUTOR DO PROJETO:</label>
+                    <input 
+                      id="bill-author-input"
+                      type="text" 
+                      value={inputAuthor} 
+                      onChange={(e) => setInputAuthor(e.target.value)}
+                      className="bg-slate-900 border border-slate-755 text-slate-100 rounded px-1.5 py-0.5 w-full focus:outline-none focus:border-indigo-500 text-3xs"
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit" 
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-3xs leading-none py-1.5 px-3 rounded shadow transition-all block text-center cursor-pointer"
+                  id="save-database-btn"
+                >
+                  SALVAR ATUALIZAÇÃO NO BANCO DE DADOS
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-2.5 pt-1" id="bill-view-panel">
+                <div className="flex justify-between items-center bg-slate-900/40 p-2 rounded border border-slate-850/60 text-3xs leading-relaxed font-sans text-slate-350">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Iniciativa Parlamentar: <strong>{inputBill}</strong></span>
+                  </div>
+                  <span className="text-[8px] text-slate-550 font-mono">TRAMITAÇÃO CONCURSAL</span>
+                </div>
+
+                <div className="bg-slate-900 p-2.5 rounded border border-slate-800 text-2xs space-y-1" id="proposal-details">
+                  <span className="text-slate-500 text-[8px] uppercase block leading-none">Autor Oficial da Proposta:</span>
+                  <span className="font-bold text-slate-200 block text-xs">{inputAuthor}</span>
+                  <p className="text-[9px] text-slate-400 font-sans leading-relaxed pt-1 border-t border-slate-850 mt-1">
+                    <strong>Como liberar o saldo retido?</strong> Esse projeto de lei visa reformar a Lei nº 11.101/05 das falências judiciais. Ele estabelece que os créditos de <strong>Participação nos Lucros e Resultados (PLR)</strong> sejam qualificados de forma imediata e indiscutível na <strong>Classe I (Créditos de Natureza Alimentar Trabalhista)</strong>, devendo ser pagos prioritariamente sem sujeição a deságios ou suspensões.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          {rjStats?.lastUpdated && (
+            <div className="text-[7.5px] text-slate-550 font-mono text-right mt-1 uppercase" id="last-updated-sec">
+              • Banco atualizado em: {rjStats.lastUpdated}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* Companies detailed list */}

@@ -3,10 +3,17 @@ import path from "path";
 
 class PureJSONDatabase {
   private filePath: string;
-  private data: {
+  public data: {
     prices: any[];
     waitlist: any[];
     users: any[];
+    rjStats?: {
+      totalRjCompanies: number;
+      totalPlrRetained: number;
+      releaseBill: string;
+      billAuthor: string;
+      lastUpdated: string;
+    };
   } = { prices: [], waitlist: [], users: [] };
 
   constructor(filePath: string) {
@@ -22,12 +29,39 @@ class PureJSONDatabase {
         if (!this.data.prices) this.data.prices = [];
         if (!this.data.waitlist) this.data.waitlist = [];
         if (!this.data.users) this.data.users = [];
+        if (!this.data.rjStats) {
+          this.data.rjStats = {
+            totalRjCompanies: 1904,
+            totalPlrRetained: 3200000000,
+            releaseBill: "PL 4363/2021",
+            billAuthor: "Deputado federal Bohn Gass (PT-RS)",
+            lastUpdated: new Date().toISOString().split("T")[0]
+          };
+        }
       } else {
+        this.data.rjStats = {
+          totalRjCompanies: 1904,
+          totalPlrRetained: 3200000000,
+          releaseBill: "PL 4363/2021",
+          billAuthor: "Deputado federal Bohn Gass (PT-RS)",
+          lastUpdated: new Date().toISOString().split("T")[0]
+        };
         this.saveDataToDisk();
       }
     } catch (err) {
       console.error("Failed to load Pure JSON database:", err);
-      this.data = { prices: [], waitlist: [], users: [] };
+      this.data = {
+        prices: [],
+        waitlist: [],
+        users: [],
+        rjStats: {
+          totalRjCompanies: 1904,
+          totalPlrRetained: 3200000000,
+          releaseBill: "PL 4363/2021",
+          billAuthor: "Deputado federal Bohn Gass (PT-RS)",
+          lastUpdated: new Date().toISOString().split("T")[0]
+        }
+      };
     }
   }
 
@@ -455,6 +489,36 @@ export function getDbUserByEmail(email: string): Promise<any | null> {
     if (!db.data.users) db.data.users = [];
     const found = db.data.users.find((u: any) => u.email === email);
     resolve(found || null);
+  });
+}
+
+export function getRJStats(): Promise<any> {
+  return new Promise((resolve) => {
+    const db = getDb() as any;
+    if (!db.data.rjStats) {
+      db.data.rjStats = {
+        totalRjCompanies: 1904,
+        totalPlrRetained: 3200000000,
+        releaseBill: "PL 4363/2021",
+        billAuthor: "Deputado federal Bohn Gass (PT-RS)",
+        lastUpdated: new Date().toISOString().split("T")[0]
+      };
+      db.saveDataToDisk();
+    }
+    resolve(db.data.rjStats);
+  });
+}
+
+export function saveRJStats(stats: any): Promise<void> {
+  return new Promise((resolve) => {
+    const db = getDb() as any;
+    db.data.rjStats = {
+      ...db.data.rjStats,
+      ...stats,
+      lastUpdated: new Date().toISOString().split("T")[0]
+    };
+    db.saveDataToDisk();
+    resolve();
   });
 }
 

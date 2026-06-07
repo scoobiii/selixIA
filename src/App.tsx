@@ -26,6 +26,7 @@ export default function App() {
   const [brentHistory, setBrentHistory] = useState<number[]>([]);
   const [ttfHistory, setTtfHistory] = useState<number[]>([]);
   const [rjPrices, setRjPrices] = useState<Record<string, number> | undefined>(undefined);
+  const [rjStats, setRjStats] = useState<any | undefined>(undefined);
   
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [threads, setThreads] = useState<BlueskyThread[]>([]);
@@ -200,6 +201,9 @@ export default function App() {
         if (data.rjPrices) {
           setRjPrices(data.rjPrices);
         }
+        if (data.rjStats) {
+          setRjStats(data.rjStats);
+        }
       }
     } catch (err) {
       console.error("Error communicating with Express state server:", err);
@@ -237,6 +241,25 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error fetching crawler logs:", err);
+    }
+  };
+
+  const handleUpdateRjStats = async (updatedPayload: any) => {
+    try {
+      const res = await fetch("/api/state/update-rj-stats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedPayload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.rjStats) {
+          setRjStats(data.rjStats);
+          await fetchLogs();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update RJ stats in server:", err);
     }
   };
 
@@ -624,6 +647,8 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
             currentSelic={selic} 
             defaultProjectedSelic={currentUser?.customizations?.customSelicTarget}
             rjPrices={rjPrices}
+            rjStats={rjStats}
+            onUpdateRjStats={handleUpdateRjStats}
           />
         </div>
 
