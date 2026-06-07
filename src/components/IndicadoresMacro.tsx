@@ -5,7 +5,7 @@
 
 import React, { useState } from "react";
 import { TrendingUp, Droplet, DollarSign, Calendar, Calculator, Activity, HelpCircle, Volume2, Flame, ShieldCheck, Award } from "lucide-react";
-import { EconomicRecord } from "../types";
+import { EconomicRecord } from "../db/types";
 import { simulateMonteCarlo, calculateTaylorRule } from "../utils/economicData";
 import { speak, SPEECH_GUIDES } from "../utils/speech";
 

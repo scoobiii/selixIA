@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { EconomicRecord, SelixTheorem } from "../types";
+import { EconomicRecord, SelixTheorem } from "../db/types";
 
 export const HISTORIC_DATA: EconomicRecord[] = [
   { date: "2026-05-08", brent: 81.25, selic: 10.50, sentiment: 58, brentMA: 81.50, selicTrend: "stable" },

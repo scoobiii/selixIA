@@ -4,14 +4,14 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw } from "lucide-react";
+import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert } from "lucide-react";
 import IndicadoresMacro from "./components/IndicadoresMacro";
 import ConsolaLog from "./components/ConsolaLog";
 import BlueskySim from "./components/BlueskySim";
 import ConsolaAnalista from "./components/ConsolaAnalista";
-import Teoremas from "./components/Teoremas";
+import Teoremas from "./Teoremas";
 import GuiaDeVoz from "./components/GuiaDeVoz";
-import { EconomicRecord, LogEntry, LogLevel, LogCategory, BlueskyThread } from "./types";
+import { EconomicRecord, LogEntry, LogLevel, LogCategory, BlueskyThread } from "./db/types";
 
 export default function App() {
   const [brent, setBrent] = useState(85.80);
@@ -38,6 +38,68 @@ export default function App() {
   const [isThreadGenerating, setIsThreadGenerating] = useState(false);
   const [isSyncingLive, setIsSyncingLive] = useState(false);
 
+  // Peak Concurrent Users and Waitlist State Variables
+  const [simultaneousUsers, setSimultaneousUsers] = useState(8);
+  const [maxAllowedUsers, setMaxAllowedUsers] = useState(20);
+  const [waitlistEntries, setWaitlistEntries] = useState<any[]>([]);
+  const [waitlistName, setWaitlistName] = useState("");
+  const [waitlistPhone, setWaitlistPhone] = useState("");
+  const [waitlistHandle, setWaitlistHandle] = useState("");
+  const [isWaitlistSubmitting, setIsWaitlistSubmitting] = useState(false);
+  const [waitlistSuccess, setWaitlistSuccess] = useState(false);
+
+  const fetchWaitlist = async () => {
+    try {
+      const res = await fetch("/api/waitlist");
+      if (res.ok) {
+        const data = await res.json();
+        setWaitlistEntries(data);
+      }
+    } catch (err) {
+      console.error("Error fetching waitlist:", err);
+    }
+  };
+
+  const handleUpdateUsers = async (val: number) => {
+    setSimultaneousUsers(val);
+    try {
+      await fetch("/api/state/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ users: val }),
+      });
+      fetchLogs();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSubmitWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waitlistName || !waitlistPhone || !waitlistHandle) return;
+    setIsWaitlistSubmitting(true);
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: waitlistName, phone: waitlistPhone, handle: waitlistHandle }),
+      });
+      if (res.ok) {
+        setWaitlistSuccess(true);
+        setWaitlistName("");
+        setWaitlistPhone("");
+        setWaitlistHandle("");
+        fetchWaitlist();
+        fetchLogs();
+        setTimeout(() => setWaitlistSuccess(false), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsWaitlistSubmitting(false);
+    }
+  };
+
   // Fetch initial state from Express backend
   const fetchSystemState = async () => {
     try {
@@ -51,6 +113,8 @@ export default function App() {
         setRating(data.rating ?? "BBB-");
         setInvestmentGrade(!!data.investmentGrade);
         setSystemWatchdog(data.system);
+        setSimultaneousUsers(data.simultaneousUsers ?? 8);
+        setMaxAllowedUsers(data.maxAllowedUsers ?? 20);
         if (data.brentHistory) {
           setBrentHistory(data.brentHistory);
         }
@@ -113,6 +177,7 @@ export default function App() {
     fetchSystemState();
     fetchLogs();
     fetchThreads();
+    fetchWaitlist();
     
     // Poll logs occasionally to mimic live crawling events
     const interval = setInterval(() => {
@@ -441,7 +506,209 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           </div>
         </div>
 
-        {/* ROW 3: Lean 4 Consistency Proof Mathematics Playground */}
+        {/* ROW 3: Concurrent Traffic Traffic Control & SQLite Waiting List Registration */}
+        <section className="bg-slate-900/60 border border-slate-900 rounded-xl p-6 space-y-6 backdrop-blur shadow-2xl" id="trafe-control-wrapper">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-850 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg">
+                <Users className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-100 tracking-tight font-sans">
+                  MONITOR DE TRÁFEGO CONCORRENTE & REDUNDÂNCIA ATIVA
+                </h2>
+                <p className="text-3xs text-slate-500 font-mono">
+                  Gargalo de Hardware do A23 (Termux, limits 384MB RAM) & Filtro de Lista de Espera ao atingir 90%
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 font-mono text-3xs">
+              <div className="bg-slate-950 border border-slate-850 px-2.5 py-1 rounded flex items-center gap-1.5">
+                <span className="text-slate-500">PROMOÇÃO:</span>
+                <strong className="text-violet-400">ATIVADA (5 MIN)</strong>
+              </div>
+              <div className="bg-slate-950 border border-slate-850 px-2.5 py-1 rounded flex items-center gap-1.5">
+                <span className="text-slate-500">LIMITE REGISTRO:</span>
+                <strong className="text-amber-500">90% CAPACIDADE</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* COLUMN 1: Explanation & Simulated Users Config */}
+            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col justify-between">
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
+                  <Clock className="w-3.5 h-3.5" /> METRICAS DE CONCORRÊNCIA
+                </h3>
+                <p className="text-3xs text-slate-450 leading-relaxed font-sans">
+                  O Selix executa localmente dentro da infraestrutura hermética do celular <strong className="text-slate-300">Samsung A23 (Termux Dev Node)</strong>. 
+                  Com limites processuais impostos para evitar sobressaltos e estagnação térmica, o limite seguro foi fixado em <strong className="text-slate-300">20 usuários simultâneos</strong>. 
+                  Atingindo 90% de estresse térmico/processamento (18 usuários ou mais), novos visitantes recebem um tempo de navegação bônus promocional de 5 minutos, sendo encaminhados à nossa lista de espera ativa persistida de forma segura usando <strong className="text-slate-300">SQLite3 local</strong>.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-slate-850/60 font-mono">
+                <div className="flex items-center justify-between text-3xs text-slate-400">
+                  <span>USUÁRIOS SIMULTÂNEOS:</span>
+                  <span className={`font-bold ${simultaneousUsers >= 18 ? "text-amber-400 animate-pulse" : "text-emerald-400"}`}>
+                    {simultaneousUsers} / {maxAllowedUsers} ({Math.round((simultaneousUsers / maxAllowedUsers) * 100)}%)
+                  </span>
+                </div>
+                
+                {/* Simulated Users Slider */}
+                <div className="space-y-1">
+                  <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    value={simultaneousUsers}
+                    onChange={(e) => handleUpdateUsers(parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                  <div className="flex justify-between text-[8px] text-slate-600">
+                    <span>Sessão Vazia</span>
+                    <span>90% Alerta</span>
+                    <span>Capacidade Max (20)</span>
+                  </div>
+                </div>
+
+                {/* Capacity Status Card */}
+                {simultaneousUsers >= 18 ? (
+                  <div className="p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 rounded flex items-start gap-2.5 animate-pulse text-3xs">
+                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-amber-450 block font-bold mb-0.5">ALERTA: 90% DA CAPACIDADE ALCANÇADA</strong>
+                      Novos usuários adicionais devem registrar-se na Lista de Espera persistente para liberar tokens de navegação promocional redundantes.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 rounded flex items-start gap-2.5 text-3xs">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-emerald-400 block font-bold mb-0.5">STATUS DO SMARTPHONE: ESTÁVEL</strong>
+                      Acesso público disponível sem fila de espera ativa. Capacidade excedente disponível para redundância secundária.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* COLUMN 2: Waitlist Registration Form */}
+            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col justify-between">
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
+                  <UserPlus className="w-4 h-4" /> REGISTRO DE FILA / REDUNDÂNCIA
+                </h3>
+                <p className="text-3xs text-slate-500 font-sans">
+                  Mesmo estando abaixo de 90% de estresse de hardware, você pode se pré-cadastrar preventivamente para garantir acessibilidade persistente através do segundo nó de redundância autônoma.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmitWaitlist} className="space-y-3 font-mono text-3xs text-slate-200">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-slate-400">NOME DO STAKEHOLDER / DEVA:</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: José Sobrinho Sobrinho"
+                    value={waitlistName}
+                    onChange={(e) => setWaitlistName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] text-slate-400">TELEFONE DE CONTATO (SMS/WA):</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Ex: +55 (11) 99999-9999"
+                    value={waitlistPhone}
+                    onChange={(e) => setWaitlistPhone(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] text-slate-400">BLUESKY HANDLE (@):</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: @zeh-sobrinho.bsky.social"
+                    value={waitlistHandle}
+                    onChange={(e) => setWaitlistHandle(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-805 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
+                  />
+                </div>
+
+                {waitlistSuccess && (
+                  <div className="text-[10px] text-emerald-400 bg-emerald-950/20 border border-emerald-500/20 rounded px-3 py-1.5 mt-2 animate-pulse">
+                    ✓ Registrado com sucesso no banco de dados SQLite local!
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isWaitlistSubmitting}
+                  className="w-full bg-indigo-900 hover:bg-indigo-850 disabled:opacity-50 text-slate-100 font-bold border border-indigo-700 text-3xs px-4 py-2 rounded transition-colors cursor-pointer flex items-center justify-center gap-1.5 uppercase font-mono tracking-wider mt-4"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  {isWaitlistSubmitting ? "REGISTRANDO..." : "REQUISITAR ENTRADA NA FILA"}
+                </button>
+              </form>
+            </div>
+
+            {/* COLUMN 3: Real SQLite Waitlist Database Stored rows */}
+            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col">
+              <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
+                  <List className="w-4 h-4" /> BANCO DE ESPERA (SQLITE FILE)
+                </h3>
+                <span className="text-4xs bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">
+                  {waitlistEntries.length} FILTRADOS
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto max-h-[220px] pr-1 space-y-2.5 font-mono text-3xs">
+                {waitlistEntries.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-600 text-center py-10">
+                    <Database className="w-8 h-8 opacity-20 mb-2" />
+                    <span>Nenhum registro de fila</span>
+                    <span className="text-[9px] opacity-60">Tabela SQLite SQLite_waitlist ativa</span>
+                  </div>
+                ) : (
+                  waitlistEntries.map((row: any, i: number) => (
+                    <div key={row.id || i} className="p-2.5 bg-slate-900 border border-slate-850 rounded hover:border-slate-800 transition-colors">
+                      <div className="flex items-center justify-between text-slate-400 font-extrabold mb-1">
+                        <span className="text-indigo-400">ID #{row.id || i+1}</span>
+                        <span className="text-[9px] text-slate-600 font-normal">
+                          {new Date(row.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5 text-[10px]">
+                        <div className="text-slate-300">
+                          Nome: <strong className="text-slate-200">{row.name}</strong>
+                        </div>
+                        <div className="text-slate-500 text-[9px]">
+                          Tel: <strong className="text-slate-400">{row.phone}</strong>
+                        </div>
+                        <div className="text-indigo-400/80 text-[9px]">
+                          Handle: <strong>{row.handle}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* ROW 4: Lean 4 Consistency Proof Mathematics Playground */}
         <div id="theorems-grounds-wrapper">
           <Teoremas />
         </div>

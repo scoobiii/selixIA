@@ -31,9 +31,57 @@ export function initDb(): Promise<void> {
             console.error("SQLite initial schema table failure:", err);
             return reject(err);
           }
+        }
+      );
+
+      // Create waitlist table for users wanting access when server is >90% busy
+      db.run(
+        `CREATE TABLE IF NOT EXISTS waitlist (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          handle TEXT NOT NULL,
+          timestamp TEXT NOT NULL
+        )`,
+        (err: any) => {
+          if (err) {
+            console.error("SQLite initial schema waitlist failure:", err);
+            return reject(err);
+          }
           resolve();
         }
       );
+    });
+  });
+}
+
+export function addWaitlistEntry(name: string, phone: string, handle: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    const timestamp = new Date().toISOString();
+    db.run(
+      `INSERT INTO waitlist (name, phone, handle, timestamp) VALUES (?, ?, ?, ?)`,
+      [name, phone, handle, timestamp],
+      (err: any) => {
+        if (err) {
+          console.error("SQLite failed to save waitlist entry:", err);
+          return reject(err);
+        }
+        resolve();
+      }
+    );
+  });
+}
+
+export function getWaitlistEntries(): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const db = getDb();
+    db.all(`SELECT * FROM waitlist ORDER BY id DESC`, (err: any, rows: any[]) => {
+      if (err) {
+        console.error("SQLite failed to query waitlist:", err);
+        return reject(err);
+      }
+      resolve(rows || []);
     });
   });
 }

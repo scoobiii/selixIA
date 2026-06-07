@@ -5,7 +5,7 @@
 
 import React, { useState } from "react";
 import { Send, Heart, Repeat, MessageCircle, Sparkles, CheckCircle2, Volume2 } from "lucide-react";
-import { BlueskyThread } from "../types";
+import { BlueskyThread } from "../db/types";
 import { speak, SPEECH_GUIDES } from "../utils/speech";
 
 interface BlueskySimProps {

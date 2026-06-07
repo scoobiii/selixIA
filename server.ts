@@ -8,12 +8,16 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
-import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices } from "./src/db/database";
+import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices, addWaitlistEntry, getWaitlistEntries } from "./src/db/database";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Peak Concurrent Users Simulation & Monitoring Variables for A23 Performance
+let currentSimultaneousUsers = 8;
+const maxAllowedUsers = 20;
 
 app.use(express.json());
 
@@ -134,6 +138,8 @@ app.get("/api/state", async (req, res) => {
       investmentGrade: currentInvestmentGrade,
       brentHistory: brentHistoryList,
       ttfHistory: ttfHistoryList,
+      simultaneousUsers: currentSimultaneousUsers,
+      maxAllowedUsers: maxAllowedUsers,
       system: {
         status: systemStatus,
         isWatchdogActive,
@@ -152,6 +158,8 @@ app.get("/api/state", async (req, res) => {
       investmentGrade: currentInvestmentGrade,
       brentHistory,
       ttfHistory,
+      simultaneousUsers: currentSimultaneousUsers,
+      maxAllowedUsers: maxAllowedUsers,
       system: {
         status: systemStatus,
         isWatchdogActive,
@@ -236,6 +244,53 @@ app.post("/api/state/reload", async (req, res) => {
     console.error("API reload error:", err);
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+app.get("/api/waitlist", async (req, res) => {
+  try {
+    const list = await getWaitlistEntries();
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to query waitlist from SQLite" });
+  }
+});
+
+app.post("/api/waitlist", async (req, res) => {
+  const { name, phone, handle } = req.body;
+  if (!name || !phone || !handle) {
+    return res.status(400).json({ error: "Preencha o nome, telefone e @ handle do Bluesky." });
+  }
+  try {
+    await addWaitlistEntry(name, phone, handle);
+    
+    mockLogs.unshift({
+      id: String(mockLogs.length + 1),
+      timestamp: new Date().toLocaleTimeString(),
+      level: "INFO",
+      category: "SYSTEM",
+      message: `Lista de Espera: ${name} (${phone}, ${handle}) registrado com sucesso.`
+    });
+    
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save waitlist entry to SQLite" });
+  }
+});
+
+app.post("/api/state/users", (req, res) => {
+  const { users } = req.body;
+  if (users !== undefined) {
+    currentSimultaneousUsers = parseInt(users);
+    
+    mockLogs.unshift({
+      id: String(mockLogs.length + 1),
+      timestamp: new Date().toLocaleTimeString(),
+      level: "SUCCESS",
+      category: "SYSTEM",
+      message: `Número de usuários simultâneos atualizado para ${currentSimultaneousUsers} de ${maxAllowedUsers}.`
+    });
+  }
+  res.json({ success: true, simultaneousUsers: currentSimultaneousUsers, maxAllowedUsers: maxAllowedUsers });
 });
 
 app.get("/api/logs", (req, res) => {

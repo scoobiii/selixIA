@@ -5,8 +5,8 @@
 
 import React, { useState } from "react";
 import { BookOpen, Shield, Code, CheckCircle2, ArrowRight, Volume2 } from "lucide-react";
-import { THEOREMS } from "../utils/economicData";
-import { speak, SPEECH_GUIDES } from "../utils/speech";
+import { THEOREMS } from "./utils/economicData";
+import { speak, SPEECH_GUIDES } from "./utils/speech";
 
 export default function Teoremas() {
   const [selectedTheoremId, setSelectedTheoremId] = useState(THEOREMS[0].id);

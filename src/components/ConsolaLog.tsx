@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Terminal, ShieldCheck, Database, RefreshCw, Cpu, Activity, Play, AlertOctagon, Info, Volume2 } from "lucide-react";
-import { LogEntry, LogCategory, LogLevel, WatchdogState } from "../types";
+import { LogEntry, LogCategory, LogLevel, WatchdogState } from "../db/types";
 import { speak, SPEECH_GUIDES } from "../utils/speech";
 
 interface ConsolaLogProps {
