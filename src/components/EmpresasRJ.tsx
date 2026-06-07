@@ -15,6 +15,8 @@ interface RJCompany {
   roi: number;           // ROI %
   leverageSensitivity: number; // sensitivity multiplier for mkt cap projection
   description: string;
+  sede: "RJ" | "SP" | "MG";
+  inRj: boolean;
 }
 
 interface EmpresasRJProps {
@@ -35,6 +37,7 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
   // Single-digit Selic target projection (defaulting to 9.00%)
   const [projectedSelic, setProjectedSelic] = useState(defaultProjectedSelic || 9.00);
   const [showSensitivityHelper, setShowSensitivityHelper] = useState(false);
+  const [filterMode, setFilterMode] = useState<"all" | "rj_only" | "sede_rj">("all");
   
   // Local edit states
   const [isEditingStats, setIsEditingStats] = useState(false);
@@ -61,7 +64,7 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
   }, [defaultProjectedSelic]);
 
 
-  // List of high-profile companies currently undergoing Recuperação Judicial (R.J.) or extrajudicial restructure
+  // List of high-profile companies currently undergoing Recuperação Judicial (R.J.) or based in Rio de Janeiro (Sede RJ)
   const rjCompaniesList: RJCompany[] = [
     {
       id: "amer3",
@@ -71,6 +74,8 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: -15.40,
       leverageSensitivity: 5.0,
       description: "Varejista histórica nacional em emblemática Recuperação Judicial após inconsistências contábeis de R$ 20 bi. Sua sobrevivência operacional depende visceralmente do custo de capital de 1 dígito.",
+      sede: "RJ",
+      inRj: true
     },
     {
       id: "ligt3",
@@ -80,6 +85,8 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: 4.80,
       leverageSensitivity: 4.5,
       description: "Distribuidora e geradora de energia elétrica em regime de Recuperação Judicial para repactuar passivos maciços. Altamente asfixiada por juros flutuantes e custos de debêntures.",
+      sede: "RJ",
+      inRj: true
     },
     {
       id: "oibr3",
@@ -89,6 +96,8 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: 3.10,
       leverageSensitivity: 4.0,
       description: "Pioneira de telecomunicações lidando com sua segunda e complexa Recuperação Judicial. A amortização de dívidas bilionárias com credores internacionais exige alívio na taxa básica de juros.",
+      sede: "RJ",
+      inRj: true
     },
     {
       id: "goll4",
@@ -98,6 +107,8 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: 5.50,
       leverageSensitivity: 3.5,
       description: "Grande player da aviação civil atualmente operando sob reestruturação financeira em Chapter 11 nos EUA. Taxas asfixiantes elevam os custos de arrendamento e debêntures de leasing.",
+      sede: "SP",
+      inRj: true
     },
     {
       id: "pmam3",
@@ -107,6 +118,8 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: 4.20,
       leverageSensitivity: 3.0,
       description: "Líder nacional na termo-metalurgia e refino de cobre sob regime de Recuperação Judicial. Excessivo endividamento financeiro indexado ao CDI consome integralmente a margem EBITDA.",
+      sede: "SP",
+      inRj: true
     },
     {
       id: "bhia3",
@@ -116,6 +129,8 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: 5.95,
       leverageSensitivity: 2.8,
       description: "Gigante do e-commerce e varejo físico nacional que homologou Recuperação Extrajudicial para prolongar e equacionar debêntures e custos de WACC indexados à taxa básica de juros.",
+      sede: "SP",
+      inRj: true
     },
     {
       id: "raiz4",
@@ -125,6 +140,41 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
       roi: 6.80,
       leverageSensitivity: 2.5,
       description: "Gigante de biocombustíveis e distribuição em severa crise de liquidez. Entregou o comitê de reestruturação financeira e governança nas mãos de credores nacionais em troca de sobrevivência para equacionar debêntures indexadas ao CDI.",
+      sede: "SP",
+      inRj: true
+    },
+    {
+      id: "petr4",
+      name: "Petrobras S.A.",
+      ticker: "PETR4",
+      mktCapCurrent: 485.40,
+      roi: 18.20,
+      leverageSensitivity: 1.5,
+      description: "Principal corporação energética do hemisfério sul, sediada no Centro do Rio de Janeiro. Altamente sensível a fluxos de arbitragem cambial, WACC de extração profunda e volatilidade do Brent.",
+      sede: "RJ",
+      inRj: false
+    },
+    {
+      id: "vale3",
+      name: "Vale S.A.",
+      ticker: "VALE3",
+      mktCapCurrent: 282.10,
+      roi: 14.50,
+      leverageSensitivity: 1.2,
+      description: "Gigante global do setor de mineração e infraestrutura logística com sede no Rio de Janeiro. Depende de prêmios de juros baixos para refinanciamento de investimentos de longo prazo.",
+      sede: "RJ",
+      inRj: false
+    },
+    {
+      id: "elet3",
+      name: "Eletrobras",
+      ticker: "ELET3",
+      mktCapCurrent: 78.60,
+      roi: 8.90,
+      leverageSensitivity: 2.0,
+      description: "Maior empresa de geração e transmissão de energia elétrica da América Latina, sediada no Rio de Janeiro. Sua imensa alavancagem de debêntures reguladas é curada com Selic de um dígito.",
+      sede: "RJ",
+      inRj: false
     }
   ];
 
@@ -394,107 +444,167 @@ export default function EmpresasRJ({ currentSelic, defaultProjectedSelic, rjPric
 
       {/* Companies detailed list */}
       <div className="space-y-3.5" id="rj-companies-grids">
-        <div className="flex justify-between items-center text-3xs text-slate-500 font-bold uppercase tracking-widest pl-1">
-          <span>PORTFÓLIO DE EMPRESAS MONITORADAS EM R.J. (ATUALIZAÇÃO DIÁRIA)</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-3xs text-slate-500 font-bold uppercase pl-1">
+          <span>PORTFÓLIO DE EMPRESAS MONITORADAS (ATUALIZAÇÃO FEED DIÁRIA)</span>
           <span className="text-[8px] text-indigo-400 font-mono animate-pulse flex items-center gap-1">
             <Sparkles className="w-2.5 h-2.5" /> FONTE OFICIAL B3 / YAHOO FINANCE
           </span>
         </div>
 
+        {/* Dynamic filter toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950 p-2.5 rounded-lg border border-slate-850/80">
+          <div className="flex items-center gap-2 font-mono text-[8px] text-slate-500 uppercase">
+            <span>Seletor de Escopo:</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setFilterMode("all")}
+              className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold uppercase transition-all cursor-pointer border ${
+                filterMode === "all"
+                  ? "bg-slate-900 border-indigo-500/40 text-indigo-300"
+                  : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-305"
+              }`}
+            >
+              Ver Todas ({rjCompaniesList.length})
+            </button>
+            <button
+              onClick={() => setFilterMode("rj_only")}
+              className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold uppercase transition-all cursor-pointer border ${
+                filterMode === "rj_only"
+                  ? "bg-slate-900 border-amber-500/40 text-amber-300"
+                  : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-305"
+              }`}
+            >
+              Em Recup. Judicial ({rjCompaniesList.filter(c => c.inRj).length})
+            </button>
+            <button
+              onClick={() => setFilterMode("sede_rj")}
+              className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold uppercase transition-all cursor-pointer border ${
+                filterMode === "sede_rj"
+                  ? "bg-slate-900 border-sky-500/40 text-sky-300"
+                  : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-305"
+              }`}
+            >
+              Headquartered in Rio ({rjCompaniesList.filter(c => c.sede === "RJ").length})
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rjCompaniesList.map((company) => {
-            const proj = calculateProjection(company);
-            const liveStockPrice = rjPrices ? rjPrices[company.id] : undefined;
+          {rjCompaniesList
+            .filter((c) => {
+              if (filterMode === "rj_only") return c.inRj;
+              if (filterMode === "sede_rj") return c.sede === "RJ";
+              return true;
+            })
+            .map((company) => {
+              const proj = calculateProjection(company);
+              const liveStockPrice = rjPrices ? rjPrices[company.id] : undefined;
 
-            return (
-              <div
-                key={company.id}
-                className="bg-slate-950 border border-slate-850 rounded-lg p-3 hover:border-indigo-500/20 transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-1.5">
-                    <div>
-                      <h4 className="font-bold text-slate-200 text-xs flex items-center gap-1.5 font-sans">
-                        <Building className="w-3.5 h-3.5 text-amber-500" />
-                        {company.name}
-                      </h4>
-                      <span className="font-mono text-[8px] bg-amber-955/40 text-amber-500 px-1 rounded inline-block mt-0.5">RECUPERAÇÃO JUDICIAL</span>
-                    </div>
-                    <span className="font-mono text-xs font-black text-rose-400 bg-rose-950/20 border border-rose-850/30 px-2 py-0.5 rounded">
-                      {company.ticker}
-                    </span>
-                  </div>
-
-                  <p className="text-[10px] text-slate-400 leading-relaxed mb-3">{company.description}</p>
-                </div>
-
-                <div className="space-y-2">
-                  {/* Stock price display indexed from Yahoo daily */}
-                  <div className="bg-slate-900/80 p-2 rounded border border-slate-850/60 font-mono text-[10px] flex justify-between items-center">
-                    <span className="text-slate-500 text-3xs font-semibold">COTAÇÃO LIVE (DAILY FEED):</span>
-                    {liveStockPrice !== undefined ? (
-                      <span className="text-emerald-400 font-black animate-pulse">
-                        R$ {liveStockPrice.toFixed(2)}
-                      </span>
-                    ) : (
-                      <span className="text-slate-500 text-[9px] italic">Aguardando feed...</span>
-                    )}
-                  </div>
-
-                  {/* Economic gauges */}
-                  <div className="grid grid-cols-2 gap-2 font-mono text-[9px]">
-                    <div className="bg-slate-900 p-1.5 rounded border border-slate-850">
-                      <span className="text-slate-500 text-4xs uppercase block">MKT CAP ATUAL</span>
-                      <span className="font-bold text-slate-300">R$ {company.mktCapCurrent.toFixed(2)} Bi</span>
-                    </div>
-                    <div className="bg-slate-900 p-1.5 rounded border border-slate-850">
-                      <span className="text-slate-500 text-4xs uppercase block">ROI OPERACIONAL</span>
-                      <span className="font-bold text-slate-300">{company.roi.toFixed(2)}%</span>
-                    </div>
-                  </div>
-
-                  {/* Simulation results details */}
-                  <div className="bg-slate-900/50 border border-slate-900 rounded p-2.5 font-mono text-[10px] space-y-2">
-                    <div className="flex justify-between items-center text-4xs border-b border-slate-900/80 pb-1.5">
-                      <span className="text-slate-500">Spread Selic Atual ({currentSelic.toFixed(2)}%):</span>
-                      <span className="text-rose-400 flex items-center gap-0.5 font-bold">
-                        <TrendingDown className="w-3 h-3 text-rose-500" /> {proj.spreadCurrent.toFixed(2)}%
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-[9px]">Spread Selic Projetada ({projectedSelic.toFixed(2)}%):</span>
-                      <span className={`font-black flex items-center gap-0.5 text-[9px] ${proj.spreadProjected > 0 ? "text-emerald-400" : "text-amber-400"}`}>
-                        {proj.spreadProjected > 0 ? (
-                          <>
-                            <TrendingUp className="w-3 h-3 text-emerald-400 animate-bounce" />
-                            +{proj.spreadProjected.toFixed(2)}% (Superavit)
-                          </>
-                        ) : (
-                          <>
-                            <TrendingDown className="w-3 h-3 text-amber-400" />
-                            {proj.spreadProjected.toFixed(2)}%
-                          </>
-                        )}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-1.5 border-t border-slate-900/85">
-                      <span className="text-slate-400 font-medium">Mkt Cap Projetado:</span>
-                      <span className="text-slate-200 font-extrabold flex items-center gap-1 text-[11px]">
-                        R$ {proj.mktCapProjected.toFixed(2)} Bi
-                        {proj.mktCapIncreasePercent > 0 && (
-                          <span className="text-[8px] text-emerald-400 bg-emerald-950/50 rounded px-1 font-black">
-                            +{proj.mktCapIncreasePercent.toFixed(1)}%
+              return (
+                <div
+                  key={company.id}
+                  className="bg-slate-950 border border-slate-850 rounded-lg p-3 hover:border-indigo-500/20 transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between mb-1.5">
+                      <div>
+                        <h4 className="font-bold text-slate-200 text-xs flex items-center gap-1.5 font-sans">
+                          <Building className="w-3.5 h-3.5 text-indigo-400" />
+                          {company.name}
+                        </h4>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <span className={`font-mono text-[7px] px-1 rounded inline-block font-extrabold uppercase ${
+                            company.inRj 
+                              ? "bg-rose-950/40 text-rose-400 border border-rose-900/20" 
+                              : "bg-emerald-950/40 text-emerald-400 border border-emerald-900/20"
+                          }`}>
+                            {company.inRj ? "Recup. Judicial" : "Corporate Lead"}
                           </span>
-                        )}
+                          <span className={`font-mono text-[7px] px-1 rounded inline-block font-extrabold uppercase ${
+                            company.sede === "RJ" 
+                              ? "bg-sky-950/40 text-sky-400 border border-sky-900/20" 
+                              : "bg-slate-900 text-slate-400 border border-slate-800"
+                          }`}>
+                            Sede: {company.sede}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="font-mono text-xs font-black text-indigo-400 bg-indigo-950/20 border border-indigo-850/30 px-2 py-0.5 rounded">
+                        {company.ticker}
                       </span>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 leading-relaxed mb-3">{company.description}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Stock price display indexed from Yahoo daily */}
+                    <div className="bg-slate-900/80 p-2 rounded border border-slate-850/60 font-mono text-[10px] flex justify-between items-center">
+                      <span className="text-slate-500 text-3xs font-semibold">COTAÇÃO LIVE (DAILY FEED):</span>
+                      {liveStockPrice !== undefined ? (
+                        <span className="text-emerald-400 font-black animate-pulse">
+                          R$ {liveStockPrice.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 text-[9px] italic">Aguardando feed...</span>
+                      )}
+                    </div>
+
+                    {/* Economic gauges */}
+                    <div className="grid grid-cols-2 gap-2 font-mono text-[9px]">
+                      <div className="bg-slate-900 p-1.5 rounded border border-slate-850">
+                        <span className="text-slate-500 text-4xs uppercase block">MKT CAP ATUAL</span>
+                        <span className="font-bold text-slate-300 text-[10px]">R$ {company.mktCapCurrent.toFixed(2)} Bi</span>
+                      </div>
+                      <div className="bg-slate-900 p-1.5 rounded border border-slate-850">
+                        <span className="text-slate-500 text-4xs uppercase block">ROI OPERACIONAL</span>
+                        <span className="font-bold text-slate-300 text-[10px]">{company.roi.toFixed(2)}%</span>
+                      </div>
+                    </div>
+
+                    {/* Simulation results details */}
+                    <div className="bg-slate-900/50 border border-slate-900 rounded p-2.5 font-mono text-[10px] space-y-2">
+                      <div className="flex justify-between items-center text-4xs border-b border-slate-900/80 pb-1.5">
+                        <span className="text-slate-500">Spread Selic Atual ({currentSelic.toFixed(2)}%):</span>
+                        <span className="text-rose-400 flex items-center gap-0.5 font-bold">
+                          <TrendingDown className="w-3 h-3 text-rose-500" /> {proj.spreadCurrent.toFixed(2)}%
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-[9px]">Spread Selic Projetada ({projectedSelic.toFixed(2)}%):</span>
+                        <span className={`font-black flex items-center gap-0.5 text-[9px] ${proj.spreadProjected > 0 ? "text-emerald-400" : "text-amber-400"}`}>
+                          {proj.spreadProjected > 0 ? (
+                            <>
+                              <TrendingUp className="w-3 h-3 text-emerald-400 animate-bounce" />
+                              +{proj.spreadProjected.toFixed(2)}% (Superavit)
+                            </>
+                          ) : (
+                            <>
+                              <TrendingDown className="w-3 h-3 text-amber-400" />
+                              {proj.spreadProjected.toFixed(2)}%
+                            </>
+                          )}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center pt-1.5 border-t border-slate-900/85">
+                        <span className="text-slate-400 font-medium">Mkt Cap Projetado:</span>
+                        <span className="text-slate-200 font-extrabold flex items-center gap-1 text-[11px]">
+                          R$ {proj.mktCapProjected.toFixed(2)} Bi
+                          {proj.mktCapIncreasePercent > 0 && (
+                            <span className="text-[8px] text-emerald-400 bg-emerald-950/50 rounded px-1 font-black">
+                              +{proj.mktCapIncreasePercent.toFixed(1)}%
+                            </span>
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       </div>
     </div>

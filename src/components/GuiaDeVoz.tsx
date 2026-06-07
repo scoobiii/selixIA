@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { Volume2, VolumeX, Radio, Play, Pause, Square, HelpCircle, Sparkles, Navigation } from "lucide-react";
 import { speak, cancelSpeech, SPEECH_GUIDES, getMuteState, setMuteState } from "../utils/speech";
+import { SELIX_PERSONAS } from "../utils/personas";
 
 interface GuiaDeVozProps {
   brent: number;
@@ -13,6 +14,7 @@ interface GuiaDeVozProps {
   sentiment: number;
   watchdogStatus: string;
   watchdogRam: number;
+  activePersonaId?: string;
 }
 
 export default function GuiaDeVoz({
@@ -21,6 +23,7 @@ export default function GuiaDeVoz({
   sentiment,
   watchdogStatus,
   watchdogRam,
+  activePersonaId = "jornalista",
 }: GuiaDeVozProps) {
   const [isMuted, setIsMuted] = useState(getMuteState());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -67,8 +70,16 @@ export default function GuiaDeVoz({
     }
   };
 
+  const currentPersonaConfig = SELIX_PERSONAS.find(p => p.id === activePersonaId) || SELIX_PERSONAS[0];
+
   // Quick tours mapping
   const tours = [
+    {
+      key: "persona_guide",
+      label: `Explicar: ${currentPersonaConfig.name}`,
+      text: currentPersonaConfig.voiceGuide,
+      icon: currentPersonaConfig.emoji
+    },
     {
       key: "welcome",
       label: "Apresentar Selix",

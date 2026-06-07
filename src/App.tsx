@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert } from "lucide-react";
+import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert, ArrowRight, Play, CheckCircle } from "lucide-react";
 import IndicadoresMacro from "./components/IndicadoresMacro";
 import EmpresasRJ from "./components/EmpresasRJ";
 import ConsolaLog from "./components/ConsolaLog";
@@ -15,6 +15,9 @@ import GuiaDeVoz from "./components/GuiaDeVoz";
 import UserLoginArea from "./components/UserLoginArea";
 import PremiumControlPanel from "./components/PremiumControlPanel";
 import { EconomicRecord, LogEntry, LogLevel, LogCategory, BlueskyThread } from "./db/types";
+import { SELIX_PERSONAS, calculatePersonaSpecificMetrics } from "./utils/personas";
+import RegionalBillingPanel from "./components/RegionalBillingPanel";
+import { LocaleType } from "./utils/billingAndI18n";
 
 export default function App() {
   const [brent, setBrent] = useState(93.09);
@@ -55,6 +58,32 @@ export default function App() {
 
   // User Session & Customizable Preferences State
   const [currentUser, setCurrentUser] = useState<any | null>(null);
+
+  // Target Persona State (Jornalista, Economista, Politico, etc.)
+  const [activePersona, setActivePersona] = useState<string>(() => localStorage.getItem("selix_active_persona") || "jornalista");
+
+  useEffect(() => {
+    localStorage.setItem("selix_active_persona", activePersona);
+  }, [activePersona]);
+
+  // Regionalization and multi-tenant billing active locale (pt-BR, en-US, es-ES)
+  const [activeLocale, setActiveLocale] = useState<LocaleType>(() => (localStorage.getItem("selix_active_locale") as LocaleType) || "pt-BR");
+
+  useEffect(() => {
+    localStorage.setItem("selix_active_locale", activeLocale);
+  }, [activeLocale]);
+
+  // Active secondary panel toggle: default is subscription payments GUI
+  const [activeSecondaryPanel, setActiveSecondaryPanel] = useState<"watchdog" | "subscription">("subscription");
+
+  const handleCheckoutSuccessUpgrade = async () => {
+    const cachedEmail = localStorage.getItem("selix_user_email");
+    if (cachedEmail) {
+      const cachedName = localStorage.getItem("selix_user_name") || undefined;
+      const cachedPct = localStorage.getItem("selix_user_picture") || undefined;
+      await loadUserProfile(cachedEmail, cachedName, cachedPct);
+    }
+  };
 
   const loadUserProfile = async (email: string, name?: string, picture?: string) => {
     try {
@@ -400,13 +429,14 @@ export default function App() {
   // Call the RAG assistant query server route (proxies to Gemini)
   const handleCallAgentQuery = async (query: string) => {
     setIsAiPending(true);
+    const pConfig = SELIX_PERSONAS.find(p => p.id === activePersona) || SELIX_PERSONAS[0];
     try {
       const res = await fetch("/api/agent-query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query,
-          customData: { brent, selic, sentiment }
+          query: `[Foco do Perfil: ${pConfig.name}. Diretriz analítica: ${pConfig.geminiFocusPrompt}] ${query}`,
+          customData: { brent, selic, sentiment, activePersona }
         }),
       });
       if (res.ok) {
@@ -424,13 +454,18 @@ export default function App() {
     }
   };
 
-  // Generate newly formatted economic thread with server-side Gemini
+  // Generate newly formatted economic economic thread with server-side Gemini
   const handleGenerateThreadAI = async (): Promise<string[] | null> => {
     setIsThreadGenerating(true);
+    const pConfig = SELIX_PERSONAS.find(p => p.id === activePersona) || SELIX_PERSONAS[0];
     try {
-      const prompt = `Gere uma thread econômica altamente inspiradora em formato de array de string JSON, dividida exatamente em 3 partes curtas, para postagem na timeline do @zeh-sobrinho.bsky.social.
-Crie uma análise técnica e objetiva em Português considerando que o petróleo Brent está em USD ${brent.toFixed(2)}, o Gás Natural TTF Europeu em €${ttf.toFixed(2)} EUR/MWh, a Selic nacional em ${selic.toFixed(2)}% ao ano, o sentimento em ${sentiment}/100 e a situação de rating soberano: '${rating}' (${investmentGrade ? "com selo de Grau de Investimento" : "Nível especulativo"}).
-Destaque com orgulho como a bio-estratégia verde desenvolvida pelo Ministério de Minas e Energia (MME) e Ministério do Meio Ambiente (MMA) - com blends compulsórios de Etanol e Biodiesel + biogás (misturas Ex/Bx) - cria um amortecedor contra choques de Brent e TTF Gás, aliviando a meta SELIC do Banco Central para um dígito (9.25% a.a.) sem precisar queimar divisas, promovendo o rating soberano nacional para A+ e consagrando o Brasil com o selo internacional de Grau de Investimento (Investment Grade).
+      const prompt = `Você é um analista agindo estritamente do ponto de vista do perfil '${pConfig.name}'. 
+Slogan do Perfil: ${pConfig.slogan}
+Diretriz de Escrita e Viés: ${pConfig.geminiFocusPrompt}
+
+Gere uma thread econômica brasileira altamente customizada para este perfil em formato de array de string JSON, dividida exatamente em 3 partes curtas, para postagem na timeline do @zeh-sobrinho.bsky.social.
+Crie uma análise técnica correspondente em Português considerando que o petróleo Brent está em USD ${brent.toFixed(2)}, o Gás Natural TTF Europeu em €${ttf.toFixed(2)} EUR/MWh, a Selic nacional em ${selic.toFixed(2)}% ao ano, o sentimento em ${sentiment}/100 e a situação de rating soberano: '${rating}' (${investmentGrade ? "com selo de Grau de Investimento" : "Nível especulativo"}).
+Destaque o impacto na perspectiva e prioridades de ${pConfig.name}. Se o perfil for 'Energia & Clima', dê foco absoluto na bio-estratégia verde de blends Ex/Bx desenvolvida pelo Ministério de Minas e Energia (MME). Se for 'Trabalhador', dê foco no impacto no salário real, poder de compra familiar e PLR retido pelas empresas em RJ. Se for 'Setor Produtivo', debêntures corporativas e WACC. If 'Mercado', prêmio de risco, di futuro, valuation descontado.
 Cite ou copie com destaque os stakeholders envolvidos como @zeh-sobrinho.bsky.social, MME, MMA e SELIX.
 Formato estrito do retorno: Responda APENAS com um array JSON válido contendo exatamente 3 mensagens curtas adequadas para o limite de caracteres de uma publicação (máximo de 300 caracteres cada). Não adicione markdown externo adicional (sem blockquotes de crase), apenas o texto limpo do JSON ["frase 1", "frase 2", "frase 3"]`;
 
@@ -603,7 +638,263 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           sentiment={sentiment}
           watchdogStatus={systemWatchdog.status}
           watchdogRam={systemWatchdog.ramUsed}
+          activePersonaId={activePersona}
         />
+
+        {/* TARGET PERSONA WORKSPACE PANEL */}
+        <section className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 space-y-4 backdrop-blur shadow-xl relative" id="persona-workspace-section">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-slate-850 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded bg-indigo-950 text-indigo-400">
+                <Sparkles className="w-4 h-4 animate-spin-slow" />
+              </span>
+              <div>
+                <h2 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider block">
+                  Seletor de Perfil de Público-Alvo: Adaptabilidade Geral
+                </h2>
+                <div className="text-4xs text-slate-500 font-mono">
+                  CLIQUE EM UM PERFIL DE INTERESSE ABAIXO PARA ADAPTAR A EXPERIÊNCIA DO DASHBOARD EM TEMPO REAL.
+                </div>
+              </div>
+            </div>
+            <div className="text-3xs font-mono bg-indigo-950/40 text-indigo-400 border border-indigo-905/30 rounded px-2.5 py-1 flex items-center gap-1.5 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
+              MODO ATIVO: <strong className="uppercase">{activePersona}</strong>
+            </div>
+          </div>
+
+          {/* Persona quick select grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2" id="persona-tabs-bar">
+            {SELIX_PERSONAS.map((p) => {
+              const isSelected = activePersona === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setActivePersona(p.id);
+                  }}
+                  className={`p-2.5 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between h-20 ${
+                    isSelected
+                      ? "bg-slate-900 border-indigo-500 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.1)]"
+                      : "bg-slate-950/60 border-slate-850 hover:bg-slate-850 text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-base select-none">{p.emoji}</span>
+                    {isSelected && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-extrabold text-[10px] block truncate select-none leading-tight">{p.name}</span>
+                    <span className="text-[7.5px] text-slate-500 block truncate select-none font-mono mt-0.5">{p.role}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Persona Insight Showcase Widget */}
+          {(() => {
+            const currentPersona = SELIX_PERSONAS.find((p) => p.id === activePersona) || SELIX_PERSONAS[0];
+            const metrics = calculatePersonaSpecificMetrics(activePersona, brent, selic, ttf) as any;
+            
+            return (
+              <div className="bg-slate-950/80 border border-slate-855 rounded-lg p-4 grid grid-cols-1 lg:grid-cols-3 gap-5 animate-fade-in" id="persona-workbench">
+                {/* Information Column */}
+                <div className="lg:col-span-1 space-y-3 border-r border-slate-900 pr-5 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg">{currentPersona.emoji}</span>
+                      <h3 className="font-bold text-slate-200 text-xs tracking-tight font-sans">
+                        Foco de Interesse do {currentPersona.name}
+                      </h3>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-sans leading-relaxed mt-1">
+                      {currentPersona.slogan}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 bg-slate-900/40 p-2.5 rounded border border-slate-855 font-mono text-[9px]">
+                    <span className="text-slate-550 text-[7px] uppercase block mb-1">MÉTRICAS DE ATENÇÃO:</span>
+                    {currentPersona.focusHighlights.map((hl, k) => (
+                      <div key={k} className="flex items-center gap-1.5 text-slate-400">
+                        <CheckCircle className="w-3 h-3 text-indigo-400 shrink-0" />
+                        <span>{hl}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Analytical Action / Calculations widget */}
+                <div className="lg:col-span-2 flex flex-col justify-between gap-4">
+                  <div>
+                    <span className="text-[7.5px] font-mono text-indigo-400 bg-indigo-950/40 border border-indigo-900/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mb-2 inline-block">
+                      {currentPersona.badgeText} INTERACTION PLATFORM
+                    </span>
+                    
+                    {/* Dynamic view selection per profile mode */}
+                    {activePersona === "jornalista" && (
+                      <div className="space-y-3 font-mono text-3xs">
+                        <div className="space-y-1">
+                          <label className="text-slate-550 uppercase font-black text-[7px]">Pre-manchete Factual Sugerida (Fact-Checked):</label>
+                          <div className="bg-slate-900 border border-slate-850 rounded p-2 text-slate-300 leading-relaxed font-sans text-[10px] relative">
+                            {metrics.pressReadinessHeadline}
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(metrics.pressReadinessHeadline);
+                              }}
+                              className="absolute right-2 top-2 p-1 bg-slate-950 hover:bg-slate-800 rounded border border-slate-800 text-[8px] text-indigo-450 uppercase select-none cursor-pointer"
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 font-mono text-[9px] text-slate-400">
+                          <span>Índice de Confiabilidade Editorial:</span>
+                          <span className="text-emerald-450 font-extrabold">{metrics.factCheckTruthRating.toFixed(1)}% Verificado</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {activePersona === "economista" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
+                          <span className="text-slate-550 text-[7px] uppercase block">Gini Projetado (Selic {selic}%)</span>
+                          <span className="text-[11px] font-bold text-slate-200 mt-1 block">{(metrics.giniSimulated * 10).toFixed(3)}</span>
+                          <span className="text-[7px] text-rose-500 font-sans block mt-0.5">Selic alta eleva concentração patrimonial</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Transferência Rentista (Anual)</span>
+                          <span className="text-[11px] font-bold text-rose-400 mt-1 block">R$ {metrics.rentismTransferBillions.toFixed(1)} Bi</span>
+                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Pagamento de juros aos credores da dívida</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Alíquota Dividendo Sugerida</span>
+                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.dividendSurtaxPercent.toFixed(2)}%</span>
+                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Para restabelecer neutralidade social</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {activePersona === "politico" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
+                          <span className="text-slate-550 text-[7px] uppercase block">Aprovação Popular Estimada</span>
+                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.popularApprovalPercent.toFixed(1)}%</span>
+                          <span className="text-[7px] text-emerald-500 font-sans block mt-0.5">Aprovação sobe com juros mais baixos</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Resistência do Congresso</span>
+                          <span className="text-[11px] font-bold text-rose-400 mt-1 block">{metrics.congressionalCoalitionResistance.toFixed(1)}/100</span>
+                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Pressão do Congresso por juros altos</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Encargo da Dívida pública</span>
+                          <span className="text-[11px] font-bold text-slate-300 mt-1 block">R$ {metrics.publicDebtInterestCostBillions.toFixed(1)} Bi / ano</span>
+                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Gasto exclusivo com juros rolagem</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {activePersona === "empresario" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
+                          <span className="text-slate-550 text-[7px] uppercase block">WACC Médio Corporativo</span>
+                          <span className="text-[11px] font-bold text-rose-405 mt-1 block">{metrics.genericWacc.toFixed(2)}%</span>
+                          <span className="text-[7px] text-rose-500 block mt-0.5">Taxa básica {selic}% + prêmio 4.5%</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">WACC Reprojetado (Selic 9%)</span>
+                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.reprojectedWacc.toFixed(2)}%</span>
+                          <span className="text-[7px] text-emerald-500 block mt-0.5">Economia substancial na rolagem de dívida</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Média EBITDA da Indústria</span>
+                          <span className="text-[11px] font-bold text-slate-205 mt-1 block">{metrics.genericEbitdaMargin.toFixed(2)}%</span>
+                          <span className="text-[7px] text-slate-550 block mt-0.5">Margem esmagada por juros CDI</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {activePersona === "ambientalista" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
+                          <span className="text-slate-550 text-[7px] uppercase block">Paridade Etanol / Gasolina</span>
+                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{(metrics.ethanolGasParityRatio * 100).toFixed(1)}%</span>
+                          <span className="text-[7px] text-slate-550 block mt-0.5">Limite de viabilidade econômica</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Mistura Mandatária Biodiesel</span>
+                          <span className="text-[11px] font-bold text-slate-100 mt-1 block">{metrics.biodieselMandatoryBlendPercent}% (B{metrics.biodieselMandatoryBlendPercent})</span>
+                          <span className="text-[7px] text-slate-550 block mt-0.5">Blends compulsórios Ex/Bx do MME</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Crédito Descarbonização (CBIO)</span>
+                          <span className="text-[11px] font-bold text-teal-400 mt-1 block">USD ${metrics.decarbonizationCreditPriceUSD.toFixed(2)}</span>
+                          <span className="text-[7px] text-slate-550 block mt-0.5 font-sans">Preço de atacado por tonelada poupada</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {activePersona === "trabalhador" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
+                          <span className="text-slate-550 text-[7px] uppercase block">Cesta Básica Estimada</span>
+                          <span className="text-[11px] font-bold text-rose-400 mt-1 block">R$ {metrics.basicBasketCost.toFixed(2)}</span>
+                          <span className="text-[7px] text-slate-500 block">Pesquisa de custo de alimentos</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Salários Mínimos p/ Cesta</span>
+                          <span className="text-[11px] font-bold text-slate-100 mt-1 block">{(metrics.minimumWagesRequired * 10).toFixed(2)}% de um salário militar</span>
+                          <span className="text-[7px] text-slate-500 block">Proporção diária necessária</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Fator Prestação Parcelado</span>
+                          <span className="text-[11px] font-bold text-rose-455 mt-1 block">+{(metrics.installmentRateFactor * 100 - 100).toFixed(1)}% Juros</span>
+                          <span className="text-[7px] text-slate-500 block">Acréscimo no crediário básico familiar</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {activePersona === "investidor" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
+                          <span className="text-slate-550 text-[7px] uppercase block">Custo Equity Requerido (Ke)</span>
+                          <span className="text-[11px] font-bold text-indigo-400 mt-1 block">{metrics.discountRate.toFixed(2)}%</span>
+                          <span className="text-[7px] text-slate-500 block font-sans">Taxa de desconto Gordon</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-550 text-[7px] uppercase block">Múltiplo de Lucro Justo</span>
+                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.genericTerminalMultiple.toFixed(1)}x P/L</span>
+                          <span className="text-[7px] text-slate-500 block font-sans">Múltiplo implícito de retorno terminal</span>
+                        </div>
+                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
+                          <span className="text-slate-555 text-[7px] uppercase block">Sovereign CDS 5 Years</span>
+                          <span className="text-[11px] font-bold text-slate-300 mt-1 block">{metrics.countryRiskCds.toFixed(0)} bps</span>
+                          <span className="text-[7px] text-slate-500 block font-sans">Prêmio implícito contra default</span>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-slate-900/60 pt-3 text-3xs font-mono text-slate-500">
+                    <div>
+                      *Todos os dados cognitivos recalculam instantaneamente ao mover os simuladores de commodities.
+                    </div>
+                    <div className="text-indigo-400 text-3xs flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Fórmula de Consistência Formal Lean 4 Ativa
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </section>
 
         {/* Premium Customization Control Panel */}
         {currentUser && (
@@ -652,18 +943,64 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           />
         </div>
 
-        {/* ROW 2: Linux Watchdog Monitor CLI Console & Bluesky Timeline Publisher */}
+        {/* ROW 2: Managed Cloud Infrastructure (Subscription) & Bluesky Timeline Publisher */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="bento-row-2">
-          {/* Section 2A: Termux Terminal and Logs simulation */}
-          <div id="logs-console-wrapper">
-            <ConsolaLog
-              logs={logs}
-              watchdog={systemWatchdog}
-              onTriggerSelfHeal={handleTriggerSelfHeal}
-              onInjectLog={handleInjectLog}
-              brent={brent}
-              selic={selic}
-            />
+          {/* Section 2A: Dynamic Payments & Subscription Setup */}
+          <div id="logs-console-wrapper" className="flex flex-col gap-4">
+            {/* Header Toggles */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-slate-350 uppercase tracking-tight text-[10px] font-bold">GERENCIADOR DE ASSINATURA & PAGAMENTO</span>
+              </div>
+              <div className="flex gap-1 bg-slate-950 p-1 rounded-lg border border-slate-850">
+                <button
+                  type="button"
+                  onClick={() => setActiveSecondaryPanel("subscription")}
+                  className={`px-2.5 py-1 rounded transition-all text-3xs font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "subscription" ? "bg-indigo-650 text-slate-100" : "text-slate-550 hover:text-slate-350"}`}
+                >
+                  ⭐ ASSINATURA (CLOUD)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSecondaryPanel("watchdog")}
+                  className={`px-2.5 py-1 rounded transition-all text-xs font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "watchdog" ? "bg-slate-800 text-indigo-400 border border-slate-700" : "text-slate-500 hover:text-slate-400"}`}
+                >
+                  📋 Watchdog (Legacy Termux)
+                </button>
+              </div>
+            </div>
+
+            {activeSecondaryPanel === "subscription" ? (
+              <RegionalBillingPanel
+                activeLocale={activeLocale}
+                onLanguageChange={(newLocale) => {
+                  setActiveLocale(newLocale);
+                }}
+                currentUser={currentUser}
+                onUpgradeSuccess={handleCheckoutSuccessUpgrade}
+                onAddLog={(message, level, category) => {
+                  const mappedLevel: LogLevel = 
+                    level === "WARNING" ? "WARN" : 
+                    level === "DANGER" ? "CRITICAL" : 
+                    level as LogLevel;
+                  const mappedCategory: LogCategory = 
+                    category === "AI" ? "RAG" : 
+                    category === "MARKET" ? "CRAWLER" : 
+                    category as LogCategory;
+                  handleInjectLog(mappedLevel, mappedCategory, message);
+                }}
+              />
+            ) : (
+              <ConsolaLog
+                logs={logs}
+                watchdog={systemWatchdog}
+                onTriggerSelfHeal={handleTriggerSelfHeal}
+                onInjectLog={handleInjectLog}
+                brent={brent}
+                selic={selic}
+              />
+            )}
           </div>
 
           {/* Section 2B: Bluesky Profile and Thread composer (powered by Gemini) */}
