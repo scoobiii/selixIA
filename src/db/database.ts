@@ -390,6 +390,48 @@ export async function seedFromPublicApis(): Promise<void> {
   } catch (err) {
     console.error("❌ Failed to query/seed Selic rates:", err);
   }
+
+  // 4. B3 listed distressed assets under Judicial Recovery (Recuperação Judicial - R.J.) via Yahoo Finance
+  const rjTickers = ["AMER3.SA", "LIGT3.SA", "OIBR3.SA", "GOLL4.SA", "PMAM3.SA", "BHIA3.SA", "RAIZ4.SA"];
+  console.log("⚡ Indexing official Yahoo Finance for Judicial Recovery (R.J.) stock prices...");
+  for (const ticker of rjTickers) {
+    try {
+      const dbKey = ticker.replace(".SA", "").toLowerCase(); // "amer3", "ligt3", etc.
+      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=5d`, {
+        headers: { "User-Agent": userAgent }
+      });
+      if (res.ok) {
+        const data: any = await res.json();
+        const chartResult = data.chart?.result?.[0];
+        if (chartResult) {
+          const closes = chartResult.indicators?.quote?.[0]?.close || [];
+          const timestamps = chartResult.timestamp || [];
+          // Find the last valid non-null close price
+          let latestPrice: number | null = null;
+          let latestDateStr = new Date().toISOString().split("T")[0];
+
+          for (let i = closes.length - 1; i >= 0; i--) {
+            if (closes[i] !== null && closes[i] !== undefined) {
+              latestPrice = closes[i];
+              if (timestamps[i]) {
+                latestDateStr = new Date(timestamps[i] * 1000).toISOString().split("T")[0];
+              }
+              break;
+            }
+          }
+
+          if (latestPrice !== null) {
+            await savePrice(dbKey, latestPrice, latestDateStr);
+            console.log(`✅ SQLite: Recuperação Judicial stock ${ticker} updated to R$ ${latestPrice.toFixed(2)} on ${latestDateStr}.`);
+          }
+        }
+      } else {
+        console.warn(`⚠️ RJ Ticker ${ticker} fetch status not OK from Yahoo Finance: ${res.status}`);
+      }
+    } catch (err) {
+      console.error(`❌ Failed to query/seed ${ticker} daily price:`, err);
+    }
+  }
 }
 
 export function saveDbUser(user: any): Promise<void> {

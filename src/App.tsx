@@ -25,6 +25,7 @@ export default function App() {
   const [investmentGrade, setInvestmentGrade] = useState(false);
   const [brentHistory, setBrentHistory] = useState<number[]>([]);
   const [ttfHistory, setTtfHistory] = useState<number[]>([]);
+  const [rjPrices, setRjPrices] = useState<Record<string, number> | undefined>(undefined);
   
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [threads, setThreads] = useState<BlueskyThread[]>([]);
@@ -195,6 +196,9 @@ export default function App() {
         }
         if (data.ttfHistory) {
           setTtfHistory(data.ttfHistory);
+        }
+        if (data.rjPrices) {
+          setRjPrices(data.rjPrices);
         }
       }
     } catch (err) {
@@ -614,11 +618,12 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           </div>
         </div>
 
-        {/* ROW 1.5: Rio de Janeiro Stocks Projection Simulator */}
+        {/* ROW 1.5: B3 Listed Distressed Assets under Judicial Recovery (R.J.) Projection Simulator */}
         <div id="rj-companies-wrapper" className="w-full">
           <EmpresasRJ 
             currentSelic={selic} 
             defaultProjectedSelic={currentUser?.customizations?.customSelicTarget}
+            rjPrices={rjPrices}
           />
         </div>
 

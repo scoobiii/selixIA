@@ -356,6 +356,28 @@ app.get("/api/state", async (req, res) => {
     const brentHistoryList = dbBrent.length > 0 ? dbBrent.map(r => r.price) : brentHistory;
     const ttfHistoryList = dbTtf.length > 0 ? dbTtf.map(r => r.price) : ttfHistory;
 
+    // Fetch latest prices for stocks under Recuperação Judicial (R.J.)
+    const rjKeys = ["amer3", "ligt3", "oibr3", "goll4", "pmam3", "bhia3", "raiz4"];
+    const rjPrices: Record<string, number> = {
+      amer3: 0.15,
+      ligt3: 1.62,
+      oibr3: 0.70,
+      goll4: 1.15,
+      pmam3: 4.50,
+      bhia3: 6.20,
+      raiz4: 2.15
+    };
+    for (const key of rjKeys) {
+      try {
+        const hist = await getHistoricalPrices(key, 1);
+        if (hist.length > 0) {
+          rjPrices[key] = hist[0].price;
+        }
+      } catch (e) {
+        // Fallback to defaults
+      }
+    }
+
     res.json({
       brent: parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
@@ -365,6 +387,7 @@ app.get("/api/state", async (req, res) => {
       investmentGrade: currentInvestmentGrade,
       brentHistory: brentHistoryList,
       ttfHistory: ttfHistoryList,
+      rjPrices,
       simultaneousUsers: currentSimultaneousUsers,
       maxAllowedUsers: maxAllowedUsers,
       system: {
@@ -376,6 +399,15 @@ app.get("/api/state", async (req, res) => {
       }
     });
   } catch (err) {
+    const rjPricesDefault = {
+      amer3: 0.15,
+      ligt3: 1.62,
+      oibr3: 0.70,
+      goll4: 1.15,
+      pmam3: 4.50,
+      bhia3: 6.20,
+      raiz4: 2.15
+    };
     res.json({
       brent: parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
@@ -385,6 +417,7 @@ app.get("/api/state", async (req, res) => {
       investmentGrade: currentInvestmentGrade,
       brentHistory,
       ttfHistory,
+      rjPrices: rjPricesDefault,
       simultaneousUsers: currentSimultaneousUsers,
       maxAllowedUsers: maxAllowedUsers,
       system: {
@@ -686,6 +719,17 @@ async function startServer() {
   } catch (dbErr) {
     console.error("Failed to bootstrap SQLite tables and seed data, falling back to static config:", dbErr);
   }
+
+  // Daily Background Updater. Refresh prices of indexes and Judicial Recovery (R.J.) stock charts every 24 hours.
+  setInterval(async () => {
+    console.log("⏰ [SCHEDULER] Triggering automatic daily background database refresh...");
+    try {
+      await seedFromPublicApis();
+      console.log("✅ [SCHEDULER] Daily background database refresh finished successfully.");
+    } catch (err) {
+      console.error("❌ [SCHEDULER] Daily background database refresh failed:", err);
+    }
+  }, 24 * 60 * 60 * 1000);
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Selix running on port ${PORT}`);

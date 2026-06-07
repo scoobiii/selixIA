@@ -125,8 +125,8 @@ export default function GuiaDeVoz({
     },
     {
       key: "empresas_rj",
-      label: "Empresas RJ",
-      text: (SPEECH_GUIDES as any).empresas_rj ? (SPEECH_GUIDES as any).empresas_rj(selic) : "Análise de viabilidade das empresas do Rio de Janeiro.",
+      label: "Empresas em R.J.",
+      text: (SPEECH_GUIDES as any).empresas_rj ? (SPEECH_GUIDES as any).empresas_rj(selic) : "Análise e projeção de custo de capital das empresas brasileiras sob regime de Recuperação Judicial.",
       icon: "🏢"
     }
   ];
