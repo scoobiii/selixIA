@@ -1,0 +1,602 @@
+{
+  "1": [
+    {
+      "segmento": "abertura",
+      "horario": "09:00",
+      "texto": "🧵 SELIX — Economia que prioriza quem trabalha\n\n🌍 Brent: US$95.19 | 📉 Selic: 14.25% | 📰 negativo\n💰 Meta ideal: 9,25% (razão global 1,14×)\n🔗 https://github.com/scoobiii/selix\n\nFio completo 👇",
+      "chars": 188
+    },
+    {
+      "segmento": "trabalhadores",
+      "horario": "13:00",
+      "texto": "👷 Trabalhador, a Selic te cobra caro\n\nCom 14.25%, seu empréstimo de R$10k custa R$1.425/ano só de juros.\nCom 9,25%: R$925. Diferença: R$500/ano no seu bolso.\n\n#TrampoForte #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 245
+    },
+    {
+      "segmento": "investidores",
+      "horario": "18:00",
+      "texto": "📈 Oportunidade histórica\n\nGPA (PCAR3): -68% vs pico. Raízen (RAIZ4): -76%.\nCom Selic 9,25%, múltiplos normalizam.\nUpside potencial: +150-200%.\n\n#Selix #B3\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 225
+    }
+  ],
+  "2": [
+    {
+      "segmento": "governo",
+      "horario": "09:00",
+      "texto": "📉 Dívida/PIB cai com Selix\n\nHoje: dívida/PIB cresce ~3pp/ano\nCom 9,25%: estabiliza no 1º ano\nInvestment Grade A- em 3 anos\nCusto de captação externa cai 200bps\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 242
+    },
+    {
+      "segmento": "energia_clima",
+      "horario": "13:00",
+      "texto": "☀️ Solar vs juros\n\nUsina solar: payback 8 anos, IRR 13%\nCom Selic 14.25%: WACC 18% > IRR 13% = inviável\nCom Selix 9,25%: WACC 11% < IRR 13% = viável\n\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 269
+    },
+    {
+      "segmento": "jornalismo",
+      "horario": "18:00",
+      "texto": "🔍 Fact-check Selix\n\nAfirmação: Selic deveria ser 9,25%, não 14.25%\nBase: razão juros/inflação de EUA, UE, Japão, China, Alemanha\nMédia ponderada: 1,14×\nIPCA 4% × 1,14 = 4,56% ← meta\n\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social",
+      "chars": 250
+    }
+  ],
+  "3": [
+    {
+      "segmento": "bancos_mercado",
+      "horario": "09:00",
+      "texto": "🌐 Investment Grade A-\n\nCom Selix 9,25% + fiscal em ordem:\nMoody's e S&P sobem rating\nCusto de captação externa cai 150bps\nBancos BR ficam mais competitivos globalmente\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 238
+    },
+    {
+      "segmento": "politicos",
+      "horario": "13:00",
+      "texto": "💡 PL TrampoForte\n\nProposta: trabalhador recebe PLR antes do banco receber juros.\nCom Selix 9,25%: PLR liberada em 4.200 empresas.\n\nApoie o PL. #TrampoForte\n🔗 https://github.com/scoobiii/selix\n\ncc @pt.org.br @gleisi.bsky.social @randolfe.bsky.social @lindbergh.bsky.social",
+      "chars": 271
+    },
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "18:00",
+      "texto": "💼 Advogados de RJ: Selix é pauta\n\nVolume de processos de RJ cresceu 24% em 2025.\nPrincipal causa: custo financeiro > ROI.\nSelix propõe solução sistêmica, não caso a caso.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 242
+    }
+  ],
+  "4": [
+    {
+      "segmento": "academia",
+      "horario": "09:00",
+      "texto": "📚 Literatura sobre captura regulatória\n\nStigler (1971): agências capturadas por regulados.\nBCB → sistema financeiro = porta giratória.\nSelix quantifica o custo: R$270 bi/ano.\n\nArtigo completo: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br @valoreconomico.bsky.social",
+      "chars": 279
+    },
+    {
+      "segmento": "abertura",
+      "horario": "13:00",
+      "texto": "📡 SELIX — dados de hoje\n\n🛢️ Brent: US$95.19\n📉 Selic: 14.25% (deveria: 9,25%)\n🌱 Mix: EE30/BB15\n💸 Custo extra/ano: R$270 bi\n🔗 https://github.com/scoobiii/selix",
+      "chars": 157
+    },
+    {
+      "segmento": "trabalhadores",
+      "horario": "18:00",
+      "texto": "📈 Salário real vs Selic\n\nSeu salário cresce 3%/ano. A dívida do governo cresce 15%/ano.\nQuem paga? Você, via impostos e PLR zerada.\n\nSelix 9,25% quebra esse ciclo.\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 230
+    }
+  ],
+  "5": [
+    {
+      "segmento": "investidores",
+      "horario": "09:00",
+      "texto": "📈 Oportunidade histórica\n\nGPA (PCAR3): -68% vs pico. Raízen (RAIZ4): -76%.\nCom Selic 9,25%, múltiplos normalizam.\nUpside potencial: +150-200%.\n\n#Selix #B3\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 225
+    },
+    {
+      "segmento": "governo",
+      "horario": "13:00",
+      "texto": "🏛️ Governo economiza R$270 bi/ano\n\nDívida pública: R$6,9 tri\nCom Selic 14.25%: R$1 tri/ano em juros\nCom Selix 9,25%: R$638 bi/ano\nEconomia: R$362 bi para saúde, educação, infraestrutura.\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 269
+    },
+    {
+      "segmento": "energia_clima",
+      "horario": "18:00",
+      "texto": "🌱 Brent US$95.19 → Mix ideal: EE30/BB15\n\nSelix calcula em tempo real o mix ótimo de biocombustíveis.\nCom Selic 1 dígito: 100 GW solar viável em 10 anos.\n\n#EnergiaLimpa #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 294
+    }
+  ],
+  "6": [
+    {
+      "segmento": "jornalismo",
+      "horario": "09:00",
+      "texto": "🔍 Fact-check Selix\n\nAfirmação: Selic deveria ser 9,25%, não 14.25%\nBase: razão juros/inflação de EUA, UE, Japão, China, Alemanha\nMédia ponderada: 1,14×\nIPCA 4% × 1,14 = 4,56% ← meta\n\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social",
+      "chars": 250
+    },
+    {
+      "segmento": "bancos_mercado",
+      "horario": "13:00",
+      "texto": "💳 Inadimplência vs Selic\n\nSelic 14.25% → inadimplência PJ: 4,8% (recorde)\nSelix 9,25% → inadimplência estimada: 2,1%\n\nBancos perdem menos. Lucro líquido cresce.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 231
+    },
+    {
+      "segmento": "politicos",
+      "horario": "18:00",
+      "texto": "📊 Selic e votos\n\nDado histórico: inflação/juros altos = rejeição do governo.\nSelic 14.25% em ano eleitoral = eleitor insatisfeito.\n\nSelix 9,25% = agenda vencedora.\n\n#Selix2026\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 270
+    }
+  ],
+  "7": [
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "09:00",
+      "texto": "💼 Advogados de RJ: Selix é pauta\n\nVolume de processos de RJ cresceu 24% em 2025.\nPrincipal causa: custo financeiro > ROI.\nSelix propõe solução sistêmica, não caso a caso.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 242
+    },
+    {
+      "segmento": "academia",
+      "horario": "13:00",
+      "texto": "🔬 Taxa neutra vs Selic atual\n\nTaxa neutra BCB: ~5,5% real\nCom IPCA 4%: neutro nominal = 9,5%\nSelic atual: 14.25% = +4.75pp de aperto\n\nQuem justifica esse aperto além do BCB?\n🔗 https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br",
+      "chars": 234
+    },
+    {
+      "segmento": "abertura",
+      "horario": "18:00",
+      "texto": "🤖 SELIX — IA + Lean 4 + Z3\n\nProva formal: Selic deveria ser 9,25%.\nBrent US$95.19 confirms: sentimento negativo.\n\nVeja o estudo completo:\n🔗 https://github.com/scoobiii/selix",
+      "chars": 173
+    }
+  ],
+  "8": [
+    {
+      "segmento": "trabalhadores",
+      "horario": "09:00",
+      "texto": "📈 Salário real vs Selic\n\nSeu salário cresce 3%/ano. A dívida do governo cresce 15%/ano.\nQuem paga? Você, via impostos e PLR zerada.\n\nSelix 9,25% quebra esse ciclo.\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 230
+    },
+    {
+      "segmento": "investidores",
+      "horario": "13:00",
+      "texto": "🌍 Brasil vs mundo\n\nRazão juros/inflação global: 1,14×\nBrasil atual: 2,7×\nBrasil Selix: 1,14×\n\nConvengência = entrada maciça de capital estrangeiro.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 218
+    },
+    {
+      "segmento": "governo",
+      "horario": "18:00",
+      "texto": "⚡ PAC vs Selic\n\nO governo anuncia R$1,7 tri em obras.\nO BCB cobra R$1 tri/ano in juros.\n\nÉ como encher banheira com torneira aberta.\nSelix 9,25% fecha a torneira.\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 245
+    }
+  ],
+  "9": [
+    {
+      "segmento": "energia_clima",
+      "horario": "09:00",
+      "texto": "🌱 Brent US$95.19 → Mix ideal: EE30/BB15\n\nSelix calcula em tempo real o mix ótimo de biocombustíveis.\nCom Selic 1 dígito: 100 GW solar viável em 10 anos.\n\n#EnergiaLimpa #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 294
+    },
+    {
+      "segmento": "jornalismo",
+      "horario": "13:00",
+      "texto": "📰 Para redações: Selix é pauta\n\nIA + prova formal (Lean 4 + Z3) calcula Selic ótima: 9,25%.\nDados reais, código aberto, auditável.\n\nEntreviste: github.com/scoobiii/selix\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social",
+      "chars": 237
+    },
+    {
+      "segmento": "bancos_mercado",
+      "horario": "18:00",
+      "texto": "🏦 Bancos ganham mais com Selic 9,25%\n\nMenos inadimplência (empresas sobrevivem)\nMenos RJ = menos provisão para devedores duvidosos\nMercado de capitais maior = mais fee\n\nSpread ainda lucrativo.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 263
+    }
+  ],
+  "10": [
+    {
+      "segmento": "politicos",
+      "horario": "09:00",
+      "texto": "📊 Selic e votos\n\nDado histórico: inflação/juros altos = rejeição do governo.\nSelic 14.25% em ano eleitoral = eleitor insatisfeito.\n\nSelix 9,25% = agenda vencedora.\n\n#Selix2026\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 270
+    },
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "13:00",
+      "texto": "🏚️ GPA, Raízen, Americanas\n\nEmpresas em RJ com juros altos:\n• Custos financeiros > lucro operacional\n• PLR zeroed\n• Demissões para pagar dívida\n\nSelix 9,25% inverte essa equação.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br @cut.org.br @dieese.org.br",
+      "chars": 277
+    },
+    {
+      "segmento": "academia",
+      "horario": "18:00",
+      "texto": "📐 Lean 4 + Z3 como prova formal\n\ntheorem selicReal : nominal - ipca = real\ntheorem metaOtima : ipca * 1.14 = 4.56\ntheorem premioRisco : 14.25 - 4.56 = 9.69\n\nVerificável em: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br",
+      "chars": 231
+    }
+  ],
+  "11": [
+    {
+      "segmento": "abertura",
+      "horario": "09:00",
+      "texto": "🤖 SELIX — IA + Lean 4 + Z3\n\nProva formal: Selic deveria ser 9,25%.\nBrent US$95.19 confirms: sentimento negativo.\n\nVeja o estudo completo:\n🔗 https://github.com/scoobiii/selix",
+      "chars": 173
+    },
+    {
+      "segmento": "trabalhadores",
+      "horario": "13:00",
+      "texto": "🏥 Selic alta = menos emprego\n\nCada 1% de juros a mais = ~200 mil empregos destruídos (DIEESE).\nDe 14.25% para 9,25% = +1 milhão de empregos.\n\n#TrampoForte #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 228
+    },
+    {
+      "segmento": "investidores",
+      "horario": "18:00",
+      "texto": "💹 Custo de capital vs retorno\n\nWACC médio BR hoje: ~18%\nCom Selix 9,25%: WACC cai para ~11%\nIRR de projetos que hoje são inviáveis viram lucrativos.\n\n#Selix #Investimento\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 241
+    }
+  ],
+  "12": [
+    {
+      "segmento": "governo",
+      "horario": "09:00",
+      "texto": "⚡ PAC vs Selic\n\nO governo anuncia R$1,7 tri em obras.\nO BCB cobra R$1 tri/ano in juros.\n\nÉ como encher banheira com torneira aberta.\nSelix 9,25% fecha a torneira.\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 245
+    },
+    {
+      "segmento": "energia_clima",
+      "horario": "13:00",
+      "texto": "⛽ Petróleo a US$95.19 e o dilema brasileiro\n\nBrent alto = mais receita Petrobras = mais espaço fiscal\nCom Selix: receita do pré-sal financia transição energética\nMix EE30/BB15 otimiza emissões agora.\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 295
+    },
+    {
+      "segmento": "jornalismo",
+      "horario": "18:00",
+      "texto": "🤖 IA prevê Selic\n\nSelix usa Qwen + RAG + Lean 4 para calcular taxa ideal.\nNão é opinião — é prova formal verificável.\nCódigo aberto: https://github.com/scoobiii/selix\n\n#IA #Economia #Selix\n\ncc @valoreconomico.bsky.social @fgv.br @ibre.fgv.br",
+      "chars": 241
+    }
+  ],
+  "13": [
+    {
+      "segmento": "bancos_mercado",
+      "horario": "09:00",
+      "texto": "🏦 Bancos ganham mais com Selic 9,25%\n\nMenos inadimplência (empresas sobrevivem)\nMenos RJ = menos provisão para devedores duvidosos\nMercado de capitais maior = mais fee\n\nSpread ainda lucrativo.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 263
+    },
+    {
+      "segmento": "politicos",
+      "horario": "13:00",
+      "texto": "🗳️ Eleições 2026: quem defende 9,25%?\n\nSelic 1 dígito = +1M empregos + PLR liberada + B3 a US$10 tri\n\nO candidato que defender Selix chega na frente.\n\n#Selix2026 #TrampoForte\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 269
+    },
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "18:00",
+      "texto": "⚖️ 5.680 empresas em RJ em 2025\n\n+24% vs 2024. Sem recessão declarada.\nCausa: Selic 14.25% > ROI médio 11%.\n\nSelix 9,25% = viabilidade para 4.200 dessas empresas.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 234
+    }
+  ],
+  "14": [
+    {
+      "segmento": "academia",
+      "horario": "09:00",
+      "texto": "📐 Lean 4 + Z3 como prova formal\n\ntheorem selicReal : nominal - ipca = real\ntheorem metaOtima : ipca * 1.14 = 4.56\ntheorem premioRisco : 14.25 - 4.56 = 9.69\n\nVerificável em: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br",
+      "chars": 231
+    },
+    {
+      "segmento": "abertura",
+      "horario": "13:00",
+      "texto": "📊 SELIX atualizado\n\nBrent US$95.19 • Selic 14.25% • Meta global: 9,25%\n\nO BCB cobra 2,7× mais que a média mundial. Quem paga essa conta?\n🔗 https://github.com/scoobiii/selix",
+      "chars": 172
+    },
+    {
+      "segmento": "trabalhadores",
+      "horario": "18:00",
+      "texto": "💼 PLR bloqueada pela Selic\n\nGPA, Raízen e +5.680 empresas em RJ em 2025.\nSelic 14.25% > ROI médio = PLR zerada.\nCom Selix 9,25%: empresas voltam a lucrar, PLR volta.\n\n#TrampoForte\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 246
+    }
+  ],
+  "15": [
+    {
+      "segmento": "investidores",
+      "horario": "09:00",
+      "texto": "💹 Custo de capital vs retorno\n\nWACC médio BR hoje: ~18%\nCom Selix 9,25%: WACC cai para ~11%\nIRR de projetos que hoje são inviáveis viram lucrativos.\n\n#Selix #Investimento\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 241
+    },
+    {
+      "segmento": "governo",
+      "horario": "13:00",
+      "texto": "🏗️ Haddad quer R$2 tri em data centers\nBCB cobra 14,5% de capital\nIRR de data center: ~12%\n\n❌ 14,5% > 12% = projeto inviável\n✅ 9,25% < 12% = projeto viável\n\nSelix desbloqueie o investimento.\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 273
+    },
+    {
+      "segmento": "energia_clima",
+      "horario": "18:00",
+      "texto": "🌊 Crise climática + juros altos = duplo risco\n\nO Brasil tem 1,7 TW de potencial renovável.\nJuros altos travam o financiamento.\nSelix 9,25% desbloqueie R$800 bi em green finance.\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 295
+    }
+  ],
+  "16": [
+    {
+      "segmento": "jornalismo",
+      "horario": "09:00",
+      "texto": "🤖 IA prevê Selic\n\nSelix usa Qwen + RAG + Lean 4 para calcular taxa ideal.\nNão é opinião — é prova formal verificável.\nCódigo aberto: https://github.com/scoobiii/selix\n\n#IA #Economia #Selix\n\ncc @valoreconomico.bsky.social @fgv.br @ibre.fgv.br",
+      "chars": 241
+    },
+    {
+      "segmento": "bancos_mercado",
+      "horario": "13:00",
+      "texto": "📉 CDS Brasil hoje: ~200bps\nPaíses com Selix equivalente: ~40bps\n\nDiferença = prêmio de risco evitável.\nSelix remove 80bps de prêmio político-fiscal.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social @fgv.br @ibre.fgv.br",
+      "chars": 240
+    },
+    {
+      "segmento": "politicos",
+      "horario": "18:00",
+      "texto": "🌎 Brasil no G7 em 10 anos?\n\nCom Selix 9,25%:\n• PIB per capita: US$130k (+118%)\n• Investment Grade A-\n• B3: US$10 tri\n\nÉ uma escolha de política monetária.\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 249
+    }
+  ],
+  "17": [
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "09:00",
+      "texto": "⚖️ 5.680 empresas em RJ em 2025\n\n+24% vs 2024. Sem recessão declarada.\nCausa: Selic 14.25% > ROI médio 11%.\n\nSelix 9,25% = viabilidade para 4.200 dessas empresas.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 234
+    },
+    {
+      "segmento": "academia",
+      "horario": "13:00",
+      "texto": "🎓 Teoria por trás do Selix\n\nNão é MMT nem ortodoxia.\nÉ calibração: razão J/I global 1,14×\napplicada ao IPCA projetado (4%).\n= 4,56% como piso neutro.\n\nDetalhes: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br",
+      "chars": 219
+    },
+    {
+      "segmento": "abertura",
+      "horario": "18:00",
+      "texto": "🧵 SELIX — Economia que prioriza quem trabalha\n\n🌍 Brent: US$95.19 | 📉 Selic: 14.25% | 📰 negativo\n💰 Meta ideal: 9,25% (razão global 1,14×)\n🔗 https://github.com/scoobiii/selix\n\nFio completo 👇",
+      "chars": 188
+    }
+  ],
+  "18": [
+    {
+      "segmento": "trabalhadores",
+      "horario": "09:00",
+      "texto": "💼 PLR bloqueada pela Selic\n\nGPA, Raízen e +5.680 empresas em RJ em 2025.\nSelic 14.25% > ROI médio = PLR zerada.\nCom Selix 9,25%: empresas voltam a lucrar, PLR volta.\n\n#TrampoForte\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 246
+    },
+    {
+      "segmento": "investidores",
+      "horario": "13:00",
+      "texto": "🏦 B3 a US$10 tri em 10 anos?\n\nCom Selic 1 dígito + investment grade A-:\n• P/L médio sobe de 8x para 14x\n• B3: US$1,6 tri → US$10 tri\n• Ibovespa: 186k pontos (BTG proj.)\n\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 240
+    },
+    {
+      "segmento": "governo",
+      "horario": "18:00",
+      "texto": "📉 Dívida/PIB cai com Selix\n\nHoje: dívida/PIB cresce ~3pp/ano\nCom 9,25%: estabiliza no 1º ano\nInvestment Grade A- em 3 anos\nCusto de captação externa cai 200bps\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 242
+    }
+  ],
+  "19": [
+    {
+      "segmento": "energia_clima",
+      "horario": "09:00",
+      "texto": "🌊 Crise climática + juros altos = duplo risco\n\nO Brasil tem 1,7 TW de potencial renovável.\nJuros altos travam o financiamento.\nSelix 9,25% desbloqueie R$800 bi em green finance.\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 295
+    },
+    {
+      "segmento": "jornalismo",
+      "horario": "13:00",
+      "texto": "📊 Dado do dia\n\n5.680 empresas em RJ em 2025 (+24% vs 2024)\nCausa principal: Selic 14.25%\nFonte: Serasa Experian\n\nSelix 9,25% prevenia esse número.\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social @serasa.bsky.social @oab.org.br",
+      "chars": 246
+    },
+    {
+      "segmento": "bancos_mercado",
+      "horario": "18:00",
+      "texto": "🌐 Investment Grade A-\n\nCom Selix 9,25% + fiscal em ordem:\nMoody's e S&P sobem rating\nCusto de captação externa cai 150bps\nBancos BR ficam mais competitivos globalmente\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 238
+    }
+  ],
+  "20": [
+    {
+      "segmento": "politicos",
+      "horario": "09:00",
+      "texto": "🌎 Brasil no G7 em 10 anos?\n\nCom Selix 9,25%:\n• PIB per capita: US$130k (+118%)\n• Investment Grade A-\n• B3: US$10 tri\n\nÉ uma escolha de política monetária.\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 249
+    },
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "13:00",
+      "texto": "📋 Dados Serasa Experian 2025\n\n• 5.680 RJ (+24%)\n• 1.482 falências (+31%)\n• Varejo e indústria: 60% dos casos\n• Custo médio da dívida: 21,8%\n\nCom Selix 9,25%: custo médio → 13%.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 248
+    },
+    {
+      "segmento": "academia",
+      "horario": "18:00",
+      "texto": "📚 Literatura sobre captura regulatória\n\nStigler (1971): agências capturadas por regulados.\nBCB → sistema financeiro = porta giratória.\nSelix quantifica o custo: R$270 bi/ano.\n\nArtigo completo: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br @valoreconomico.bsky.social",
+      "chars": 279
+    }
+  ],
+  "21": [
+    {
+      "segmento": "abertura",
+      "horario": "09:00",
+      "texto": "🧵 SELIX — Economia que prioriza quem trabalha\n\n🌍 Brent: US$95.19 | 📉 Selic: 14.25% | 📰 negativo\n💰 Meta ideal: 9,25% (razão global 1,14×)\n🔗 https://github.com/scoobiii/selix\n\nFio completo 👇",
+      "chars": 188
+    },
+    {
+      "segmento": "trabalhadores",
+      "horario": "13:00",
+      "texto": "👷 Trabalhador, a Selic te cobra caro\n\nCom 14.25%, seu empréstimo de R$10k custa R$1.425/ano só de juros.\nCom 9,25%: R$925. Diferença: R$500/ano no seu bolso.\n\n#TrampoForte #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 245
+    },
+    {
+      "segmento": "investidores",
+      "horario": "18:00",
+      "texto": "📈 Oportunidade histórica\n\nGPA (PCAR3): -68% vs pico. Raízen (RAIZ4): -76%.\nCom Selic 9,25%, múltiplos normalizam.\nUpside potencial: +150-200%.\n\n#Selix #B3\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 225
+    }
+  ],
+  "22": [
+    {
+      "segmento": "governo",
+      "horario": "09:00",
+      "texto": "📉 Dívida/PIB cai com Selix\n\nHoje: dívida/PIB cresce ~3pp/ano\nCom 9,25%: estabiliza no 1º ano\nInvestment Grade A- em 3 anos\nCusto de captação externa cai 200bps\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 242
+    },
+    {
+      "segmento": "energia_clima",
+      "horario": "13:00",
+      "texto": "☀️ Solar vs juros\n\nUsina solar: payback 8 anos, IRR 13%\nCom Selic 14.25%: WACC 18% > IRR 13% = inviável\nCom Selix 9,25%: WACC 11% < IRR 13% = viável\n\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 269
+    },
+    {
+      "segmento": "jornalismo",
+      "horario": "18:00",
+      "texto": "🔍 Fact-check Selix\n\nAfirmação: Selic deveria ser 9,25%, não 14.25%\nBase: razão juros/inflação de EUA, UE, Japão, China, Alemanha\nMédia ponderada: 1,14×\nIPCA 4% × 1,14 = 4,56% ← meta\n\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social",
+      "chars": 250
+    }
+  ],
+  "23": [
+    {
+      "segmento": "bancos_mercado",
+      "horario": "09:00",
+      "texto": "🌐 Investment Grade A-\n\nCom Selix 9,25% + fiscal em ordem:\nMoody's e S&P sobem rating\nCusto de captação externa cai 150bps\nBancos BR ficam mais competitivos globalmente\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 238
+    },
+    {
+      "segmento": "politicos",
+      "horario": "13:00",
+      "texto": "💡 PL TrampoForte\n\nProposta: trabalhador recebe PLR antes do banco receber juros.\nCom Selix 9,25%: PLR liberada em 4.200 empresas.\n\nApoie o PL. #TrampoForte\n🔗 https://github.com/scoobiii/selix\n\ncc @pt.org.br @gleisi.bsky.social @randolfe.bsky.social @lindbergh.bsky.social",
+      "chars": 271
+    },
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "18:00",
+      "texto": "💼 Advogados de RJ: Selix é pauta\n\nVolume de processos de RJ cresceu 24% em 2025.\nPrincipal causa: custo financeiro > ROI.\nSelix propõe solução sistêmica, não caso a caso.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 242
+    }
+  ],
+  "24": [
+    {
+      "segmento": "academia",
+      "horario": "09:00",
+      "texto": "📚 Literatura sobre captura regulatória\n\nStigler (1971): agências capturadas por regulados.\nBCB → sistema financeiro = porta giratória.\nSelix quantifica o custo: R$270 bi/ano.\n\nArtigo completo: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br @valoreconomico.bsky.social",
+      "chars": 279
+    },
+    {
+      "segmento": "abertura",
+      "horario": "13:00",
+      "texto": "📡 SELIX — dados de hoje\n\n🛢️ Brent: US$95.19\n📉 Selic: 14.25% (deveria: 9,25%)\n🌱 Mix: EE30/BB15\n💸 Custo extra/ano: R$270 bi\n🔗 https://github.com/scoobiii/selix",
+      "chars": 157
+    },
+    {
+      "segmento": "trabalhadores",
+      "horario": "18:00",
+      "texto": "📈 Salário real vs Selic\n\nSeu salário cresce 3%/ano. A dívida do governo cresce 15%/ano.\nQuem paga? Você, via impostos e PLR zerada.\n\nSelix 9,25% quebra esse ciclo.\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 230
+    }
+  ],
+  "25": [
+    {
+      "segmento": "investidores",
+      "horario": "09:00",
+      "texto": "📈 Oportunidade histórica\n\nGPA (PCAR3): -68% vs pico. Raízen (RAIZ4): -76%.\nCom Selic 9,25%, múltiplos normalizam.\nUpside potencial: +150-200%.\n\n#Selix #B3\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 225
+    },
+    {
+      "segmento": "governo",
+      "horario": "13:00",
+      "texto": "🏛️ Governo economiza R$270 bi/ano\n\nDívida pública: R$6,9 tri\nCom Selic 14.25%: R$1 tri/ano in juros\nCom Selix 9,25%: R$638 bi/ano\nEconomia: R$362 bi para saúde, educação, infraestrutura.\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 269
+    },
+    {
+      "segmento": "energia_clima",
+      "horario": "18:00",
+      "texto": "🌱 Brent US$95.19 → Mix ideal: EE30/BB15\n\nSelix calcula em tempo real o mix ótimo de biocombustíveis.\nCom Selic 1 dígito: 100 GW solar viável em 10 anos.\n\n#EnergiaLimpa #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 294
+    }
+  ],
+  "26": [
+    {
+      "segmento": "jornalismo",
+      "horario": "09:00",
+      "texto": "🔍 Fact-check Selix\n\nAfirmação: Selic deveria ser 9,25%, não 14.25%\nBase: razão juros/inflação de EUA, UE, Japão, China, Alemanha\nMédia ponderada: 1,14×\nIPCA 4% × 1,14 = 4,56% ← meta\n\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social",
+      "chars": 250
+    },
+    {
+      "segmento": "bancos_mercado",
+      "rotulo": "13:00",
+      "texto": "💳 Inadimplência vs Selic\n\nSelic 14.25% → inadimplência PJ: 4,8% (recorde)\nSelix 9,25% → inadimplência estimada: 2,1%\n\nBancos perdem menos. Lucro líquido cresce.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 231
+    },
+    {
+      "segmento": "politicos",
+      "horario": "18:00",
+      "texto": "📊 Selic e votos\n\nDado histórico: inflação/juros altos = rejeição do governo.\nSelic 14.25% em ano eleitoral = eleitor insatisfeito.\n\nSelix 9,25% = agenda vencedora.\n\n#Selix2026\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 270
+    }
+  ],
+  "27": [
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "09:00",
+      "texto": "💼 Advogados de RJ: Selix é pauta\n\nVolume de processos de RJ cresceu 24% em 2025.\nPrincipal causa: custo financeiro > ROI.\nSelix propõe solução sistêmica, não caso a caso.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br",
+      "chars": 242
+    },
+    {
+      "segmento": "academia",
+      "horario": "13:00",
+      "texto": "🔬 Taxa neutra vs Selic atual\n\nTaxa neutra BCB: ~5,5% real\nCom IPCA 4%: neutro nominal = 9,5%\nSelic atual: 14.25% = +4.75pp de aperto\n\nQuem justifica esse aperto além do BCB?\n🔗 https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br",
+      "chars": 234
+    },
+    {
+      "segmento": "abertura",
+      "horario": "18:00",
+      "texto": "🤖 SELIX — IA + Lean 4 + Z3\n\nProva formal: Selic deveria ser 9,25%.\nBrent US$95.19 confirms: sentimento negativo.\n\nVeja o estudo completo:\n🔗 https://github.com/scoobiii/selix",
+      "chars": 173
+    }
+  ],
+  "28": [
+    {
+      "segmento": "trabalhadores",
+      "horario": "09:00",
+      "texto": "📈 Salário real vs Selic\n\nSeu salário cresce 3%/ano. A dívida do governo cresce 15%/ano.\nQuem paga? Você, via impostos e PLR zerada.\n\nSelix 9,25% quebra esse ciclo.\n🔗 https://github.com/scoobiii/selix\n\ncc @cut.org.br @dieese.org.br",
+      "chars": 230
+    },
+    {
+      "segmento": "investidores",
+      "horario": "13:00",
+      "texto": "🌍 Brasil vs mundo\n\nRazão juros/inflação global: 1,14×\nBrasil atual: 2,7×\nBrasil Selix: 1,14×\n\nConvengência = entrada maciça de capital estrangeiro.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 218
+    },
+    {
+      "segmento": "governo",
+      "horario": "18:00",
+      "texto": "⚡ PAC vs Selic\n\nO governo anuncia R$1,7 tri em obras.\nO BCB cobra R$1 tri/ano in juros.\n\nÉ como encher banheira com torneira aberta.\nSelix 9,25% fecha a torneira.\n🔗 https://github.com/scoobiii/selix\n\ncc @bndes.gov.br @fazenda.gov.br @ipea.gov.br",
+      "chars": 245
+    }
+  ],
+  "29": [
+    {
+      "segmento": "energia_clima",
+      "horario": "09:00",
+      "texto": "🌱 Brent US$95.19 → Mix ideal: EE30/BB15\n\nSelix calcula em tempo real o mix ótimo de biocombustíveis.\nCom Selic 1 dígito: 100 GW solar viável em 10 anos.\n\n#EnergiaLimpa #Selix\n🔗 https://github.com/scoobiii/selix\n\ncc @wwfbrasil.bsky.social @minaseenergia.bsky.social @petrobrasoficial.bsky.social",
+      "chars": 294
+    },
+    {
+      "segmento": "jornalismo",
+      "horario": "13:00",
+      "texto": "📰 Para redações: Selix é pauta\n\nIA + prova formal (Lean 4 + Z3) calcula Selic ótima: 9,25%.\nDados reais, código aberto, auditável.\n\nEntreviste: github.com/scoobiii/selix\n🔗 https://github.com/scoobiii/selix\n\ncc @valoreconomico.bsky.social",
+      "chars": 237
+    },
+    {
+      "segmento": "bancos_mercado",
+      "horario": "18:00",
+      "texto": "🏦 Bancos ganham mais com Selic 9,25%\n\nMenos inadimplência (empresas sobrevivem)\nMenos RJ = menos provisão para devedores duvidosos\nMercado de capitais maior = mais fee\n\nSpread ainda lucrativo.\n🔗 https://github.com/scoobiii/selix\n\ncc @b3.com.br @nubank.bsky.social",
+      "chars": 263
+    }
+  ],
+  "30": [
+    {
+      "segmento": "politicos",
+      "horario": "09:00",
+      "texto": "📊 Selic e votos\n\nDado histórico: inflação/juros altos = rejeição do governo.\nSelic 14.25% em ano eleitoral = eleitor insatisfeito.\n\nSelix 9,25% = agenda vencedora.\n\n#Selix2026\n🔗 https://github.com/scoobiii/selix\n\ncc @lula.com.br @tarcisio.bsky.social @boulos.bsky.social",
+      "chars": 270
+    },
+    {
+      "segmento": "rj_recuperacao",
+      "horario": "13:00",
+      "texto": "🏚️ GPA, Raízen, Americanas\n\nEmpresas em RJ com juros altos:\n• Custos financeiros > lucro operational\n• PLR zeroed\n• Demissões para pagar dívida\n\nSelix 9,25% inverte essa equação.\n🔗 https://github.com/scoobiii/selix\n\ncc @serasa.bsky.social @oab.org.br @cut.org.br @dieese.org.br",
+      "chars": 277
+    },
+    {
+      "segmento": "academia",
+      "horario": "18:00",
+      "texto": "📐 Lean 4 + Z3 como prova formal\n\ntheorem selicReal : nominal - ipca = real\ntheorem metaOtima : ipca * 1.14 = 4.56\ntheorem premioRisco : 14.25 - 4.56 = 9.69\n\nVerificável em: https://github.com/scoobiii/selix\n\ncc @fgv.br @ibre.fgv.br",
+      "chars": 231
+    }
+  ]
+}

@@ -5,12 +5,157 @@
 
 import express from "express";
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
-import { initDb, seedFromPublicApis, savePrice, getHistoricalPrices, addWaitlistEntry, getWaitlistEntries, saveDbUser, getDbUserByEmail, getRJStats, saveRJStats } from "./src/db/database";
+import { 
+  initDb, 
+  seedFromPublicApis, 
+  savePrice, 
+  getHistoricalPrices, 
+  addWaitlistEntry, 
+  getWaitlistEntries, 
+  saveDbUser, 
+  getDbUserByEmail, 
+  getRJStats, 
+  saveRJStats,
+  getBlueskyScheduler,
+  saveBlueskyScheduler
+} from "./src/db/database";
+import { publishThreadToBluesky } from "./src/utils/bluesky";
 
 dotenv.config();
+
+// Load Bluesky schedule 30-day catalog
+const catalogPath = path.join(process.cwd(), "src", "utils", "bluesky_catalog.json");
+let bskyCatalog: Record<string, any[]> = {};
+try {
+  if (fs.existsSync(catalogPath)) {
+    bskyCatalog = JSON.parse(fs.readFileSync(catalogPath, "utf-8"));
+    console.log("✅ [SCHEDULER] Bluesky 30-day catalog loaded successfully with", Object.keys(bskyCatalog).length, "days.");
+  } else {
+    console.log("⚠️ [SCHEDULER] Bluesky catalog file not found at", catalogPath);
+  }
+} catch (e) {
+  console.error("❌ [SCHEDULER] Error parsing bluesky_catalog.json:", e);
+}
+
+/**
+ * Returns current date/time adjusted to Brasília (UTC-3) timezone
+ */
+function getBrasiliaTime() {
+  const d = new Date();
+  const brTime = new Date(d.getTime() - (3 * 60 * 60 * 1000));
+  return {
+    day: brTime.getUTCDate(),
+    month: brTime.getUTCMonth() + 1,
+    year: brTime.getUTCFullYear(),
+    hour: brTime.getUTCHours(),
+    minute: brTime.getUTCMinutes(),
+    timeStr: `${String(brTime.getUTCHours()).padStart(2, "0")}:${String(brTime.getUTCMinutes()).padStart(2, "0")}`
+  };
+}
+
+/**
+ * Background Scheduler Cycle for Bluesky Auto-Postings
+ */
+async function runBlueskySchedulerCycle() {
+  const username = process.env.BLUESKY_USERNAME;
+  const password = process.env.BLUESKY_APP_PASSWORD;
+
+  if (!username || !password || username === "MY_BLUESKY_USERNAME" || password === "MY_BLUESKY_APP_PASSWORD") {
+    return; // Silent bypass if credentials are not configured in local environment
+  }
+
+  try {
+    const scheduler = await getBlueskyScheduler();
+    if (!scheduler || !scheduler.active) return;
+
+    const dayIndex = scheduler.currentDayIndex || 1;
+    const dayPosts = bskyCatalog[String(dayIndex)];
+    if (!dayPosts || !Array.isArray(dayPosts)) return;
+
+    const brInfo = getBrasiliaTime();
+    
+    for (const slot of dayPosts) {
+      const { segmento, horario, texto } = slot;
+      const [schedHr, schedMin] = horario.split(":").map(Number);
+      
+      const alreadyPosted = scheduler.history.some(
+        (h: any) => h.dayIndex === dayIndex && h.segmento === segmento
+      );
+
+      if (alreadyPosted) continue;
+
+      const currentMinutesInDay = brInfo.hour * 60 + brInfo.minute;
+      const scheduledMinutesInDay = schedHr * 60 + schedMin;
+
+      if (currentMinutesInDay >= scheduledMinutesInDay) {
+        console.log(`⏰ [SCHEDULER] Time matching! Auto-publishing Day ${dayIndex} - ${segmento} to Bluesky...`);
+        
+        const postsArray = [texto];
+        const publishResult = await publishThreadToBluesky(postsArray);
+        
+        if (publishResult && publishResult.length > 0) {
+          scheduler.history.unshift({
+            dayIndex,
+            segmento,
+            horario,
+            timestamp: new Date().toISOString(),
+            uri: publishResult[0].uri,
+            cid: publishResult[0].cid,
+            textSnippet: texto.substring(0, 70) + "..."
+          });
+
+          // Unshift simulated thread to the web app's UI timeline
+          mockThreads.unshift({
+            id: "thread_sch_" + Date.now(),
+            timestamp: new Date().toISOString(),
+            posts: postsArray.map(t => ({ text: t })),
+            likes: Math.floor(Math.random() * 30) + 15,
+            reposts: Math.floor(Math.random() * 12) + 4,
+            replies: Math.floor(Math.random() * 4),
+            automated: true,
+          });
+
+          // Record log
+          mockLogs.unshift({
+            id: String(mockLogs.length + 1),
+            timestamp: new Date().toLocaleTimeString(),
+            level: "SUCCESS",
+            category: "BLUESKY",
+            message: `[SCHEDULER] Auto-published Day ${dayIndex} (${segmento}) successfully to real Bluesky: ${publishResult[0].uri}`
+          });
+
+          await saveBlueskyScheduler(scheduler);
+        }
+      }
+    }
+
+    // Advance day index if all 3 slots of the current day are posted
+    const daySlots = dayPosts.map(d => d.segmento);
+    const completedSlotsCount = daySlots.filter(seg => 
+      scheduler.history.some((h: any) => h.dayIndex === dayIndex && h.segmento === seg)
+    ).length;
+
+    if (completedSlotsCount >= daySlots.length && daySlots.length > 0) {
+      const nextDayIndex = (dayIndex % 30) + 1;
+      scheduler.currentDayIndex = nextDayIndex;
+      await saveBlueskyScheduler(scheduler);
+      
+      mockLogs.unshift({
+        id: String(mockLogs.length + 1),
+        timestamp: new Date().toLocaleTimeString(),
+        level: "INFO",
+        category: "SYSTEM",
+        message: `[SCHEDULER] Completed all posts for Day ${dayIndex}. Next target: Day ${nextDayIndex}.`
+      });
+    }
+  } catch (err) {
+    console.error("❌ [SCHEDULER] Exception during auto-post loop:", err);
+  }
+}
 
 const app = express();
 const PORT = 3000;
@@ -615,16 +760,162 @@ app.get("/api/threads", (req, res) => {
   res.json(mockThreads);
 });
 
-app.post("/api/threads/publish", (req, res) => {
+// Scheduler state endpoint
+app.get("/api/state/bluesky-scheduler", async (req, res) => {
+  try {
+    const scheduler = await getBlueskyScheduler();
+    const docsEnabled = !!(process.env.BLUESKY_USERNAME && process.env.BLUESKY_APP_PASSWORD && process.env.BLUESKY_USERNAME !== "MY_BLUESKY_USERNAME" && process.env.BLUESKY_APP_PASSWORD !== "MY_BLUESKY_APP_PASSWORD");
+    res.json({
+      ...scheduler,
+      credentialsConfigured: docsEnabled,
+      username: process.env.BLUESKY_USERNAME || "",
+      catalogSize: Object.keys(bskyCatalog).length,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Scheduler properties update
+app.post("/api/state/bluesky-scheduler/update", async (req, res) => {
+  const { active, currentDayIndex } = req.body;
+  try {
+    const scheduler = await getBlueskyScheduler();
+    if (active !== undefined) scheduler.active = !!active;
+    if (currentDayIndex !== undefined) {
+      const num = Number(currentDayIndex);
+      if (num >= 1 && num <= 30) {
+        scheduler.currentDayIndex = num;
+      }
+    }
+    await saveBlueskyScheduler(scheduler);
+    res.json(scheduler);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Scheduler force trigger immediately
+app.post("/api/state/bluesky-scheduler/force-trigger", async (req, res) => {
+  try {
+    const scheduler = await getBlueskyScheduler();
+    const dayIndex = scheduler.currentDayIndex || 1;
+    const dayPosts = bskyCatalog[String(dayIndex)];
+    if (!dayPosts || !Array.isArray(dayPosts) || dayPosts.length === 0) {
+      return res.status(400).json({ error: "Invalid day posts in catalog." });
+    }
+
+    let targetSlot = null;
+    for (const slot of dayPosts) {
+      const { segmento } = slot;
+      const alreadyPosted = scheduler.history.some(
+        (h: any) => h.dayIndex === dayIndex && h.segmento === segmento
+      );
+      if (!alreadyPosted) {
+        targetSlot = slot;
+        break;
+      }
+    }
+
+    if (!targetSlot) {
+      return res.status(400).json({ error: `All slots for Day ${dayIndex} are already published. Switch day index to test more.` });
+    }
+
+    const { segmento, horario, texto } = targetSlot;
+    console.log(`⚡ [SCHEDULER] Force triggering Bluesky post: Day ${dayIndex} - ${segmento}`);
+
+    const postsArray = [texto];
+    const result = await publishThreadToBluesky(postsArray);
+    
+    const realUri = result && result.length > 0 ? result[0].uri : `mock_uri_${Date.now()}`;
+    const realCid = result && result.length > 0 ? result[0].cid : `mock_cid_${Date.now()}`;
+
+    scheduler.history.unshift({
+      dayIndex,
+      segmento,
+      horario,
+      timestamp: new Date().toISOString(),
+      uri: realUri,
+      cid: realCid,
+      textSnippet: texto.substring(0, 100) + "...",
+      manualForce: true
+    });
+
+    const daySlots = dayPosts.map(d => d.segmento);
+    const completedSlotsCount = daySlots.filter(seg => 
+      scheduler.history.some((h: any) => h.dayIndex === dayIndex && h.segmento === seg)
+    ).length;
+
+    if (completedSlotsCount >= daySlots.length) {
+      scheduler.currentDayIndex = (dayIndex % 30) + 1;
+    }
+
+    await saveBlueskyScheduler(scheduler);
+
+    mockThreads.unshift({
+      id: "thread_sch_" + Date.now(),
+      timestamp: new Date().toISOString(),
+      posts: [{ text: texto }],
+      likes: Math.floor(Math.random() * 20) + 10,
+      reposts: Math.floor(Math.random() * 5) + 1,
+      replies: 0,
+      automated: true,
+    });
+
+    mockLogs.unshift({
+      id: String(mockLogs.length + 1),
+      timestamp: new Date().toLocaleTimeString(),
+      level: realUri.startsWith("mock") ? "INFO" : "SUCCESS",
+      category: "BLUESKY",
+      message: realUri.startsWith("mock")
+        ? `[SIMULATED AUTO] Dispatched mock Day ${dayIndex} (${segmento}) successfully (no real .env credentials).`
+        : `[SCHEDULER FORCE] Dispatched Day ${dayIndex} (${segmento}) successfully to real Bluesky: ${realUri}`
+    });
+
+    return res.json({
+      success: true,
+      postedSegment: segmento,
+      dayIndex,
+      uri: realUri,
+      simulated: realUri.startsWith("mock")
+    });
+
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post("/api/threads/publish", async (req, res) => {
   const { posts, automated } = req.body;
   if (!posts || !Array.isArray(posts) || posts.length === 0) {
     return res.status(400).json({ error: "Invalid posts data" });
   }
 
+  const rawStrings = posts.map(p => typeof p === "string" ? p : (p.text || ""));
+
+  let realUri = null;
+  let realCid = null;
+  let simulatedMessage = "";
+
+  const username = process.env.BLUESKY_USERNAME;
+  const password = process.env.BLUESKY_APP_PASSWORD;
+  const hasRealCreds = !!(username && password && username !== "MY_BLUESKY_USERNAME" && password !== "MY_BLUESKY_APP_PASSWORD");
+
+  if (hasRealCreds) {
+    console.log("📡 [BLUESKY] Publishing manual thread of size:", rawStrings.length);
+    const result = await publishThreadToBluesky(rawStrings);
+    if (result && result.length > 0) {
+      realUri = result[0].uri;
+      realCid = result[0].cid;
+    } else {
+      simulatedMessage = " (Erro ao conectar com API do Bluesky)";
+    }
+  }
+
   const newThread = {
     id: "thread_" + Date.now(),
     timestamp: new Date().toISOString(),
-    posts: posts.map(p => ({ text: p.text || p })),
+    posts: rawStrings.map(t => ({ text: t })),
     likes: 0,
     reposts: 0,
     replies: 0,
@@ -633,16 +924,17 @@ app.post("/api/threads/publish", (req, res) => {
 
   mockThreads.unshift(newThread);
   
-  // Also push a system log
   mockLogs.unshift({
     id: String(mockLogs.length + 1),
     timestamp: new Date().toLocaleTimeString(),
-    level: "SUCCESS",
+    level: hasRealCreds && realUri ? "SUCCESS" : "INFO",
     category: "BLUESKY",
-    message: `Newly composed thread of ${posts.length} posts successfully published to Bluesky network.`
+    message: hasRealCreds && realUri 
+      ? `Successfully published Thread (size: ${rawStrings.length}) to real Bluesky network! Uri: ${realUri}`
+      : `Manual thread of ${posts.length} posts published to simulated timeline${simulatedMessage}`
   });
 
-  res.json(newThread);
+  res.json({ ...newThread, realUri, realCid });
 });
 
 // AI Agent Query Endpoint powered by server-side Gemini
@@ -750,6 +1042,19 @@ async function startServer() {
   } catch (dbErr) {
     console.error("Failed to bootstrap SQLite tables and seed data, falling back to static config:", dbErr);
   }
+
+  // Run Bluesky Scheduler on startup
+  console.log("⏰ [SCHEDULER] Triggering Bluesky Scheduler on boot...");
+  try {
+    await runBlueskySchedulerCycle();
+  } catch (e) {
+    console.error("Error running Bluesky Scheduler on boot:", e);
+  }
+
+  // Periodic Bluesky Scheduler. Run every 60 seconds to check time thresholds.
+  setInterval(async () => {
+    await runBlueskySchedulerCycle();
+  }, 60 * 1000);
 
   // Daily Background Updater. Refresh prices of indexes and Judicial Recovery (R.J.) stock charts every 24 hours.
   setInterval(async () => {

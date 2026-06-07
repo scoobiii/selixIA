@@ -668,6 +668,12 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
 
           {/* Section 2B: Bluesky Profile and Thread composer (powered by Gemini) */}
           <div id="bluesky-sim-wrapper">
+            <button 
+              id="trigger-threads-refresh" 
+              onClick={fetchThreads} 
+              className="hidden" 
+              style={{ display: "none" }}
+            />
             <BlueskySim
               threads={threads}
               onPublishThread={handlePublishThread}

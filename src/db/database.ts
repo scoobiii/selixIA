@@ -14,6 +14,11 @@ class PureJSONDatabase {
       billAuthor: string;
       lastUpdated: string;
     };
+    blueskyScheduler?: {
+      active: boolean;
+      currentDayIndex: number;
+      history: any[];
+    };
   } = { prices: [], waitlist: [], users: [] };
 
   constructor(filePath: string) {
@@ -38,6 +43,13 @@ class PureJSONDatabase {
             lastUpdated: new Date().toISOString().split("T")[0]
           };
         }
+        if (!this.data.blueskyScheduler) {
+          this.data.blueskyScheduler = {
+            active: true,
+            currentDayIndex: 1,
+            history: []
+          };
+        }
       } else {
         this.data.rjStats = {
           totalRjCompanies: 1904,
@@ -45,6 +57,11 @@ class PureJSONDatabase {
           releaseBill: "PL 4363/2021",
           billAuthor: "Deputado federal Bohn Gass (PT-RS)",
           lastUpdated: new Date().toISOString().split("T")[0]
+        };
+        this.data.blueskyScheduler = {
+          active: true,
+          currentDayIndex: 1,
+          history: []
         };
         this.saveDataToDisk();
       }
@@ -60,6 +77,11 @@ class PureJSONDatabase {
           releaseBill: "PL 4363/2021",
           billAuthor: "Deputado federal Bohn Gass (PT-RS)",
           lastUpdated: new Date().toISOString().split("T")[0]
+        },
+        blueskyScheduler: {
+          active: true,
+          currentDayIndex: 1,
+          history: []
         }
       };
     }
@@ -521,4 +543,32 @@ export function saveRJStats(stats: any): Promise<void> {
     resolve();
   });
 }
+
+export function getBlueskyScheduler(): Promise<any> {
+  return new Promise((resolve) => {
+    const db = getDb() as any;
+    if (!db.data.blueskyScheduler) {
+      db.data.blueskyScheduler = {
+        active: true,
+        currentDayIndex: 1,
+        history: []
+      };
+      db.saveDataToDisk();
+    }
+    resolve(db.data.blueskyScheduler);
+  });
+}
+
+export function saveBlueskyScheduler(schedulerState: any): Promise<void> {
+  return new Promise((resolve) => {
+    const db = getDb() as any;
+    db.data.blueskyScheduler = {
+      ...db.data.blueskyScheduler,
+      ...schedulerState
+    };
+    db.saveDataToDisk();
+    resolve();
+  });
+}
+
 
