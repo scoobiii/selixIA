@@ -25,6 +25,7 @@ import {
   getDb
 } from "./src/db/database";
 import { publishThreadToBluesky } from "./src/utils/bluesky";
+import { capacityControlMiddleware, getActiveUsersCount, getMaxCapacity } from "./src/middleware/capacityControl";
 
 dotenv.config();
 
@@ -161,11 +162,8 @@ async function runBlueskySchedulerCycle() {
 const app = express();
 const PORT = 3000;
 
-// Peak Concurrent Users Simulation & Monitoring Variables for A23 Performance
-let currentSimultaneousUsers = 8;
-const maxAllowedUsers = 20;
-
 app.use(express.json());
+app.use(capacityControlMiddleware);
 
 // Initialize Gemini SDK with custom User-Agent configuration
 const apiKey = process.env.GEMINI_API_KEY;
@@ -345,185 +343,103 @@ app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
         })
       });
 
-      if (!tokenRes.ok) {
-        throw new Error(`Google exchange error: ${tokenRes.statusText}`);
-      }
+      const tokens = await tokenRes.json();
+      if (tokens.error) throw new Error(tokens.error_description || tokens.error);
 
-      const tokens: any = await tokenRes.json();
-      const accessToken = tokens.access_token;
-
-      // Fetch user profile info
-      const profileRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` }
+      // Fetch user info from Google
+      const userRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokens.access_token}` }
       });
+      const googleUser = await userRes.json();
 
-      if (!profileRes.ok) {
-        throw new Error("Failed to fetch Google profile");
-      }
-
-      const profile: any = await profileRes.json();
       user = {
-        email: profile.email,
-        name: profile.name || profile.given_name || "Google User",
-        picture: profile.picture,
+        email: googleUser.email,
+        name: googleUser.name,
+        picture: googleUser.picture,
         provider: "google",
-        customizations: {
-          customSelicTarget: 9.00,
-          customBrentTarget: 85.00,
-          customTtfTarget: 35.00,
-          watchdogSensitivity: 90,
-          themeAccent: "indigo",
-          notes: ""
-        },
-        verified: true,
         timestamp: new Date().toISOString()
       };
     } catch (err: any) {
-      console.error("Error exchanging OAuth code:", err);
-      return res.send(`
-        <html>
-          <body style="background:#0f172a; color:#f8fafc; font-family:sans-serif; text-align:center; padding:50px;">
-            <h2 style="color:#ef4444;">Erro de Autenticação OAuth</h2>
-            <p>${err.message || "Erro desconhecido durante a autenticação."}</p>
-            <button onclick="window.close()" style="background:#4f46e5; border:none; color:white; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold; margin-top:15px;">Fechar Janela</button>
-          </body>
-        </html>
-      `);
+      console.error("OAuth error:", err);
+      return res.redirect(`${appUrl}/?error=${encodeURIComponent(err.message)}`);
     }
   }
 
-  // Persist user in the JSON databases
   if (user) {
-    const existing = await getDbUserByEmail(user.email);
-    if (existing) {
-      // Merge customizations with existing profile so they are not wiped out
-      user.customizations = { ...user.customizations, ...existing.customizations };
+    // Save or update user in JSON database
+    try {
+      const existing = await getDbUserByEmail(user.email);
+      if (existing) {
+        user.customizations = existing.customizations;
+      } else {
+        user.customizations = {
+          customSelicTarget: 9.25,
+          customBrentTarget: 85.00,
+          customTtfTarget: 35.00,
+          watchdogSensitivity: 50,
+          themeAccent: "amber",
+          notes: ""
+        };
+      }
+      await saveDbUser(user);
+    } catch (dbErr) {
+      console.error("Failed to persist user to JSON DB:", dbErr);
     }
-    await saveDbUser(user);
-    
-    // Add success log to the console
-    mockLogs.unshift({
-      id: String(mockLogs.length + 1),
-      timestamp: new Date().toLocaleTimeString(),
-      level: "SUCCESS",
-      category: "SYSTEM",
-      message: `Usuário ${user.name} (${user.email}) autenticado com sucesso e carregado do JSON DB.`
-    });
-  }
 
-  // Send success message to parent window and close popup
-  res.send(`
-    <html>
-      <body style="background:#0f172a; color:#f8fafc; font-family:sans-serif; text-align:center; padding-top:100px;">
-        <div style="background:#1e293b; border-radius:12px; border:1px solid #334155; display:inline-block; padding:30px; box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-          <div style="width:60px; height:60px; border-radius:50%; background:#22c55e; display:flex; align-items:center; justify-content:center; margin:0 auto 15px;">
-            <svg style="width:30px; height:30px; fill:none; stroke:white; stroke-width:3;" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 style="margin:5px 0 10px;">Autenticado com Sucesso</h2>
-          <p style="color:#94a3b8; font-size:14px; margin-bottom:20px;">Olá <strong>${user?.name || "Investidor"}</strong>, sua sessão foi sincronizada!</p>
-          <p style="color:#64748b; font-size:12px;">Esta janela se fechará automaticamente...</p>
-        </div>
-        <script>
-          if (window.opener) {
-            window.opener.postMessage({ 
-              type: 'OAUTH_AUTH_SUCCESS', 
-              user: ${JSON.stringify(user)} 
-            }, '*');
-            setTimeout(() => {
-              window.close();
-            }, 1000);
-          } else {
-            window.location.href = '/';
-          }
-        </script>
-      </body>
-    </html>
-  `);
+    // Pass user data to frontend via URL params (for simplicity in this simulator)
+    const params = new URLSearchParams({
+      email: user.email,
+      name: user.name,
+      picture: user.picture || "",
+      customizations: JSON.stringify(user.customizations)
+    });
+    res.redirect(`${appUrl}/?${params.toString()}`);
+  }
 });
 
-// Profile read/write endpoint
 app.post("/api/auth/profile", async (req, res) => {
-  const { email, customizations, name, picture } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: "Email is required" });
-  }
+  const { email, name, picture, customizations } = req.body;
+  if (!email) return res.status(400).json({ error: "Email is required" });
 
   try {
-    let existingUser = await getDbUserByEmail(email);
-    if (!existingUser) {
-      existingUser = {
+    let user = await getDbUserByEmail(email);
+    if (!user) {
+      user = {
         email,
-        name: name || email.split("@")[0],
-        picture: picture || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120",
-        provider: "local",
+        name: name || "Anonymous",
+        picture: picture || "",
         customizations: customizations || {
-          customSelicTarget: 9.00,
-          customBrentTarget: 80.00,
-          customTtfTarget: 30.00,
-          watchdogSensitivity: 85,
-          themeAccent: "indigo",
+          customSelicTarget: 9.25,
+          customBrentTarget: 85.00,
+          customTtfTarget: 35.00,
+          watchdogSensitivity: 50,
+          themeAccent: "amber",
           notes: ""
         }
       };
-      await saveDbUser(existingUser);
-    } else {
-      let isChanged = false;
-      if (customizations) {
-        existingUser.customizations = { ...existingUser.customizations, ...customizations };
-        isChanged = true;
-      }
-      if (name && existingUser.name !== name) {
-        existingUser.name = name;
-        isChanged = true;
-      }
-      if (picture && existingUser.picture !== picture) {
-        existingUser.picture = picture;
-        isChanged = true;
-      }
-      if (isChanged) {
-        await saveDbUser(existingUser);
-      }
+    } else if (customizations) {
+      user.customizations = { ...user.customizations, ...customizations };
     }
-
-    res.json({ success: true, user: existingUser });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to process user profile" });
+    
+    await saveDbUser(user);
+    res.json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ error: "Database profile failure" });
   }
 });
 
 app.get("/api/state", async (req, res) => {
+  const activeUsersCount = getActiveUsersCount();
+  const maxCapacity = getMaxCapacity();
   try {
-    const dbBrent = await getHistoricalPrices("brent", 30);
-    const dbTtf = await getHistoricalPrices("ttf", 30);
-    const dbSelic = await getHistoricalPrices("selic", 30);
+    const brentHist = await getHistoricalPrices("brent", 10);
+    const ttfHist = await getHistoricalPrices("ttf", 10);
+    const selicHist = await getHistoricalPrices("selic", 1);
     const rjStats = await getRJStats();
 
-    const brentHistoryList = dbBrent.length > 0 ? dbBrent.map(r => r.price) : brentHistory;
-    const ttfHistoryList = dbTtf.length > 0 ? dbTtf.map(r => r.price) : ttfHistory;
-
-    // Fetch latest prices for stocks under Recuperação Judicial (R.J.)
-    const rjKeys = ["amer3", "ligt3", "oibr3", "goll4", "pmam3", "bhia3", "raiz4"];
-    const rjPrices: Record<string, number> = {
-      amer3: 0.15,
-      ligt3: 1.62,
-      oibr3: 0.70,
-      goll4: 1.15,
-      pmam3: 4.50,
-      bhia3: 6.20,
-      raiz4: 2.15
-    };
-    for (const key of rjKeys) {
-      try {
-        const hist = await getHistoricalPrices(key, 1);
-        if (hist.length > 0) {
-          rjPrices[key] = hist[0].price;
-        }
-      } catch (e) {
-        // Fallback to defaults
-      }
-    }
+    if (brentHist.length > 0) currentBrent = brentHist[brentHist.length - 1].price;
+    if (ttfHist.length > 0) currentTtf = ttfHist[ttfHist.length - 1].price;
+    if (selicHist.length > 0) currentSelic = selicHist[selicHist.length - 1].price;
 
     res.json({
       brent: parseFloat(currentBrent.toFixed(2)),
@@ -532,41 +448,22 @@ app.get("/api/state", async (req, res) => {
       sentiment: currentSentiment,
       rating: currentRating,
       investmentGrade: currentInvestmentGrade,
-      brentHistory: brentHistoryList,
-      ttfHistory: ttfHistoryList,
-      rjPrices,
+      brentHistory: brentHist.map(h => h.price),
+      ttfHistory: ttfHist.map(h => h.price),
       rjStats,
-      simultaneousUsers: currentSimultaneousUsers,
-      maxAllowedUsers: maxAllowedUsers,
       system: {
         status: systemStatus,
         isWatchdogActive,
         cpuTemp: 54 + Math.floor(Math.random() * 8),
         ramUsed: 92 + Math.floor(Math.random() * 30),
         lastCheck: new Date().toLocaleTimeString(),
+        activeUsers: activeUsersCount,
+        maxCapacity: maxCapacity,
+        capacityReached: activeUsersCount >= maxCapacity * 0.9,
+        firstAccess: (req as any).userSession?.firstAccess || null,
       }
     });
   } catch (err) {
-    const rjPricesDefault = {
-      amer3: 0.15,
-      ligt3: 1.62,
-      oibr3: 0.70,
-      goll4: 1.15,
-      pmam3: 4.50,
-      bhia3: 6.20,
-      raiz4: 2.15
-    };
-    let rjStatsDefault = {
-      totalRjCompanies: 1904,
-      totalPlrRetained: 3200000000,
-      releaseBill: "PL 4363/2021",
-      billAuthor: "Deputado federal Bohn Gass (PT-RS)",
-      lastUpdated: new Date().toISOString().split("T")[0]
-    };
-    try {
-      rjStatsDefault = await getRJStats();
-    } catch (_) {}
-
     res.json({
       brent: parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
@@ -576,16 +473,16 @@ app.get("/api/state", async (req, res) => {
       investmentGrade: currentInvestmentGrade,
       brentHistory,
       ttfHistory,
-      rjPrices: rjPricesDefault,
-      rjStats: rjStatsDefault,
-      simultaneousUsers: currentSimultaneousUsers,
-      maxAllowedUsers: maxAllowedUsers,
       system: {
         status: systemStatus,
         isWatchdogActive,
         cpuTemp: 52 + Math.floor(Math.random() * 10),
         ramUsed: 88 + Math.floor(Math.random() * 30),
         lastCheck: new Date().toLocaleTimeString(),
+        activeUsers: activeUsersCount,
+        maxCapacity: maxCapacity,
+        capacityReached: activeUsersCount >= maxCapacity * 0.9,
+        firstAccess: (req as any).userSession?.firstAccess || null,
       }
     });
   }
@@ -606,15 +503,6 @@ app.post("/api/state/update", async (req, res) => {
     if (selic !== undefined) {
       currentSelic = parseFloat(selic);
       await savePrice("selic", currentSelic, todayStr);
-      
-      // Auto-recompute rating based on single-digit vs double-digit Selic
-      if (currentSelic >= 10.00) {
-        currentRating = "BBB-";
-        currentInvestmentGrade = false;
-      } else {
-        currentRating = "Investment Grade";
-        currentInvestmentGrade = true;
-      }
     }
     if (sentiment !== undefined) currentSentiment = parseInt(sentiment);
     if (rating !== undefined) currentRating = rating;
@@ -637,19 +525,20 @@ app.post("/api/state/update", async (req, res) => {
 });
 
 app.post("/api/state/update-rj-stats", async (req, res) => {
-  const { totalRjCompanies, totalPlrRetained, releaseBill, billAuthor } = req.body;
   try {
-    const updatePayload: any = {};
-    if (totalRjCompanies !== undefined) updatePayload.totalRjCompanies = parseInt(totalRjCompanies);
-    if (totalPlrRetained !== undefined) updatePayload.totalPlrRetained = parseFloat(totalPlrRetained);
-    if (releaseBill !== undefined) updatePayload.releaseBill = releaseBill;
-    if (billAuthor !== undefined) updatePayload.billAuthor = billAuthor;
-
-    await saveRJStats(updatePayload);
-    const updatedStats = await getRJStats();
-    res.json({ success: true, rjStats: updatedStats });
+    const { totalRjCompanies, totalPlrRetained, releaseBill, billAuthor } = req.body;
+    const current = await getRJStats();
+    const updated = {
+      totalRjCompanies: totalRjCompanies !== undefined ? Number(totalRjCompanies) : current.totalRjCompanies,
+      totalPlrRetained: totalPlrRetained !== undefined ? Number(totalPlrRetained) : current.totalPlrRetained,
+      releaseBill: releaseBill || current.releaseBill,
+      billAuthor: billAuthor || current.billAuthor,
+      lastUpdated: new Date().toISOString().split("T")[0]
+    };
+    await saveRJStats(updated);
+    res.json({ success: true, rjStats: updated });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to update RJ stats in SQLite" });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -692,293 +581,6 @@ app.post("/api/state/reload", async (req, res) => {
   }
 });
 
-app.get("/api/waitlist", async (req, res) => {
-  try {
-    const list = await getWaitlistEntries();
-    res.json(list);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to query waitlist from SQLite" });
-  }
-});
-
-app.post("/api/waitlist", async (req, res) => {
-  const { name, phone, handle } = req.body;
-  if (!name || !phone || !handle) {
-    return res.status(400).json({ error: "Preencha o nome, telefone e @ handle do Bluesky." });
-  }
-  try {
-    await addWaitlistEntry(name, phone, handle);
-    
-    mockLogs.unshift({
-      id: String(mockLogs.length + 1),
-      timestamp: new Date().toLocaleTimeString(),
-      level: "INFO",
-      category: "SYSTEM",
-      message: `Lista de Espera: ${name} (${phone}, ${handle}) registrado com sucesso.`
-    });
-    
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to save waitlist entry to SQLite" });
-  }
-});
-
-app.post("/api/state/users", (req, res) => {
-  const { users } = req.body;
-  if (users !== undefined) {
-    currentSimultaneousUsers = parseInt(users);
-    
-    mockLogs.unshift({
-      id: String(mockLogs.length + 1),
-      timestamp: new Date().toLocaleTimeString(),
-      level: "SUCCESS",
-      category: "SYSTEM",
-      message: `Número de usuários simultâneos atualizado para ${currentSimultaneousUsers} de ${maxAllowedUsers}.`
-    });
-  }
-  res.json({ success: true, simultaneousUsers: currentSimultaneousUsers, maxAllowedUsers: maxAllowedUsers });
-});
-
-app.get("/api/logs", (req, res) => {
-  res.json(mockLogs);
-});
-
-// Real payment transactions registry and APIs
-let stripeClient: any = null;
-async function getStripe() {
-  if (!stripeClient) {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (key && key !== "MY_STRIPE_SECRET_KEY") {
-      try {
-        const { default: Stripe } = await import("stripe");
-        stripeClient = new Stripe(key);
-      } catch (e) {
-        console.error("Failed to dynamically import Stripe SDK:", e);
-      }
-    }
-  }
-  return stripeClient;
-}
-
-app.post("/api/billing/checkout", async (req, res) => {
-  const { providerId, amount, currency, email, locale } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: "E-mail do cliente é obrigatório para faturamento." });
-  }
-
-  const transactionId = `${providerId}_tx_${Math.random().toString(36).substring(2, 11)}`;
-  
-  // Try real Stripe first if Stripe is selected
-  if (providerId === "stripe") {
-    const stripe = await getStripe();
-    if (stripe) {
-      try {
-        const appUrl = (process.env.APP_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          line_items: [
-            {
-              price_data: {
-                currency: currency.toLowerCase(),
-                product_data: {
-                  name: `Selix Premium PRO - Plano Anual (${locale})`,
-                  description: "Monitoramento de Inteligência Macroeconômica & Bio-Estratégia MME/MMA",
-                },
-                unit_amount: Math.round(amount * 100),
-              },
-              quantity: 1,
-            },
-          ],
-          mode: "payment",
-          success_url: `${appUrl}/?success=true&session_id={CHECKOUT_SESSION_ID}&email=${encodeURIComponent(email)}`,
-          cancel_url: `${appUrl}/?canceled=true`,
-          customer_email: email,
-        });
-
-        mockLogs.unshift({
-          id: String(mockLogs.length + 1),
-          timestamp: new Date().toLocaleTimeString(),
-          level: "INFO",
-          category: "SYSTEM",
-          message: `[BILLING] Checkout real criado no Stripe para ${email}. ID: ${session.id}`
-        });
-
-        return res.json({
-          stripeSessionUrl: session.url,
-          transactionId: session.id,
-          providerName: "Stripe Real Gateway",
-          status: "pending",
-          isRealStripe: true
-        });
-      } catch (stripeErr: any) {
-        console.error("Stripe Checkout Error:", stripeErr);
-        mockLogs.unshift({
-          id: String(mockLogs.length + 1),
-          timestamp: new Date().toLocaleTimeString(),
-          level: "WARN",
-          category: "SYSTEM",
-          message: `[BILLING] Falha ao iniciar checkout real do Stripe para ${email}. Fallback automático ativado.`
-        });
-      }
-    }
-  }
-
-  // Fallback to high-fidelity regional gateways
-  let visualPayload: any = {};
-  if (providerId === "pix") {
-    const amountStr = amount.toFixed(2).replace(".", "");
-    visualPayload = {
-      qrCodeBase64: `00020101021226840014br.gov.bcb.pix2562sa-east-1.api.selix-workspace.br/pix/prod/0530398658204000053039865405${amountStr}5802BR5913SELIX%20BIO-TECH6008BRASILIA62070503***6304D540`
-    };
-  } else if (providerId === "crypto") {
-    visualPayload = {
-      cryptoAddress: "0xFE6371A4De2cE8fEE94c7C22409748bAA89bEde5"
-    };
-  } else if (providerId === "paypal") {
-    visualPayload = {
-      paypalUrl: true
-    };
-  } else {
-    visualPayload = {
-      requiresManualVerification: true
-    };
-  }
-
-  // Save transaction in database dynamically
-  const db = getDb() as any;
-  if (!db.data.transactions) db.data.transactions = [];
-  
-  const tx = {
-    id: transactionId,
-    email,
-    amount,
-    currency,
-    providerId,
-    status: "pending",
-    locale,
-    createdAt: new Date().toISOString(),
-    visualPayload
-  };
-  
-  db.data.transactions.push(tx);
-  db.saveDataToDisk();
-
-  mockLogs.unshift({
-    id: String(mockLogs.length + 1),
-    timestamp: new Date().toLocaleTimeString(),
-    level: "INFO",
-    category: "SYSTEM",
-    message: `[BILLING] Checkout criado (${providerId}) para ${email}. ID: ${transactionId} de ${currency} ${amount.toFixed(2)}`
-  });
-
-  res.json({
-    transactionId,
-    providerName: providerId === "pix" ? "Pix Gateway Geral" : providerId === "crypto" ? "Coinbase Commerce (Crypto)" : `${providerId} Sandbox`,
-    status: "pending",
-    visualPayload,
-    isRealStripe: false
-  });
-});
-
-app.post("/api/billing/confirm", async (req, res) => {
-  const { transactionId, email } = req.body;
-  if (!transactionId) {
-    return res.status(400).json({ error: "TransactionId é obrigatório para confirmar faturamento." });
-  }
-
-  const db = getDb() as any;
-  if (!db.data.transactions) db.data.transactions = [];
-
-  let isStripeSession = transactionId.startsWith("cs_") || transactionId.startsWith("sess_");
-  
-  if (isStripeSession) {
-    const stripe = await getStripe();
-    if (stripe) {
-      try {
-        const session = await stripe.checkout.sessions.retrieve(transactionId);
-        if (session.payment_status === "paid") {
-          const userEmail = session.customer_email || email;
-          if (userEmail) {
-            let existingUser = await getDbUserByEmail(userEmail);
-            if (existingUser) {
-              existingUser.customizations = {
-                ...existingUser.customizations,
-                isPremiumPro: true,
-                premiumPlan: "PRO_ANNUAL",
-                subscriptionActive: true,
-                paymentTxId: transactionId
-              };
-              await saveDbUser(existingUser);
-            }
-          }
-
-          mockLogs.unshift({
-            id: String(mockLogs.length + 1),
-            timestamp: new Date().toLocaleTimeString(),
-            level: "SUCCESS",
-            category: "SYSTEM",
-            message: `[BILLING] Stripe real liquidado com sucesso! Licença PRO liberada para ${userEmail}.`
-          });
-
-          return res.json({ success: true, status: "success", message: "Stripe payment validated." });
-        }
-      } catch (stripeErr) {
-        console.error("Failed to verify real stripe session:", stripeErr);
-      }
-    }
-  }
-
-  // Handle local simulation transaction confirm
-  const txIdx = db.data.transactions.findIndex((t: any) => t.id === transactionId);
-  if (txIdx !== -1) {
-    db.data.transactions[txIdx].status = "success";
-    const userEmail = db.data.transactions[txIdx].email || email;
-    
-    // Upgrade user to Premium PRO inside Database
-    const existingUser = await getDbUserByEmail(userEmail);
-    if (existingUser) {
-      existingUser.customizations = {
-        ...(existingUser.customizations || {}),
-        isPremiumPro: true,
-        premiumPlan: "PRO_ANNUAL",
-        subscriptionActive: true,
-        paymentTxId: transactionId
-      };
-      await saveDbUser(existingUser);
-    }
-    
-    db.saveDataToDisk();
-
-    mockLogs.unshift({
-      id: String(mockLogs.length + 1),
-      timestamp: new Date().toLocaleTimeString(),
-      level: "SUCCESS",
-      category: "SYSTEM",
-      message: `[BILLING] Transação simular ${transactionId} confirmada. Plano PRO ativado para ${userEmail}.`
-    });
-
-    return res.json({ success: true, status: "success" });
-  }
-
-  // Fallback direct success if transaction not registered
-  if (email) {
-    const existingUser = await getDbUserByEmail(email);
-    if (existingUser) {
-      existingUser.customizations = {
-        ...(existingUser.customizations || {}),
-        isPremiumPro: true,
-        premiumPlan: "PRO_ANNUAL",
-        subscriptionActive: true,
-        paymentTxId: transactionId
-      };
-      await saveDbUser(existingUser);
-    }
-    return res.json({ success: true, status: "success", message: "Direct fallback success applied." });
-  }
-
-  res.status(404).json({ error: "Transação não encontrada e e-mail não fornecido." });
-});
-
 app.get("/api/logs", (req, res) => {
   res.json(mockLogs);
 });
@@ -1001,128 +603,23 @@ app.get("/api/threads", (req, res) => {
   res.json(mockThreads);
 });
 
-// Scheduler state endpoint
-app.get("/api/state/bluesky-scheduler", async (req, res) => {
+app.get("/api/bluesky/scheduler", async (req, res) => {
   try {
     const scheduler = await getBlueskyScheduler();
-    const docsEnabled = !!(process.env.BLUESKY_USERNAME && process.env.BLUESKY_APP_PASSWORD && process.env.BLUESKY_USERNAME !== "MY_BLUESKY_USERNAME" && process.env.BLUESKY_APP_PASSWORD !== "MY_BLUESKY_APP_PASSWORD");
-    res.json({
-      ...scheduler,
-      credentialsConfigured: docsEnabled,
-      username: process.env.BLUESKY_USERNAME || "",
-      catalogSize: Object.keys(bskyCatalog).length,
-    });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Scheduler properties update
-app.post("/api/state/bluesky-scheduler/update", async (req, res) => {
-  const { active, currentDayIndex } = req.body;
-  try {
-    const scheduler = await getBlueskyScheduler();
-    if (active !== undefined) scheduler.active = !!active;
-    if (currentDayIndex !== undefined) {
-      const num = Number(currentDayIndex);
-      if (num >= 1 && num <= 30) {
-        scheduler.currentDayIndex = num;
-      }
-    }
-    await saveBlueskyScheduler(scheduler);
     res.json(scheduler);
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to load scheduler" });
   }
 });
 
-// Scheduler force trigger immediately
-app.post("/api/state/bluesky-scheduler/force-trigger", async (req, res) => {
+app.post("/api/bluesky/scheduler/toggle", async (req, res) => {
   try {
     const scheduler = await getBlueskyScheduler();
-    const dayIndex = scheduler.currentDayIndex || 1;
-    const dayPosts = bskyCatalog[String(dayIndex)];
-    if (!dayPosts || !Array.isArray(dayPosts) || dayPosts.length === 0) {
-      return res.status(400).json({ error: "Invalid day posts in catalog." });
-    }
-
-    let targetSlot = null;
-    for (const slot of dayPosts) {
-      const { segmento } = slot;
-      const alreadyPosted = scheduler.history.some(
-        (h: any) => h.dayIndex === dayIndex && h.segmento === segmento
-      );
-      if (!alreadyPosted) {
-        targetSlot = slot;
-        break;
-      }
-    }
-
-    if (!targetSlot) {
-      return res.status(400).json({ error: `All slots for Day ${dayIndex} are already published. Switch day index to test more.` });
-    }
-
-    const { segmento, horario, texto } = targetSlot;
-    console.log(`⚡ [SCHEDULER] Force triggering Bluesky post: Day ${dayIndex} - ${segmento}`);
-
-    const postsArray = [texto];
-    const result = await publishThreadToBluesky(postsArray);
-    
-    const realUri = result && result.length > 0 ? result[0].uri : `mock_uri_${Date.now()}`;
-    const realCid = result && result.length > 0 ? result[0].cid : `mock_cid_${Date.now()}`;
-
-    scheduler.history.unshift({
-      dayIndex,
-      segmento,
-      horario,
-      timestamp: new Date().toISOString(),
-      uri: realUri,
-      cid: realCid,
-      textSnippet: texto.substring(0, 100) + "...",
-      manualForce: true
-    });
-
-    const daySlots = dayPosts.map(d => d.segmento);
-    const completedSlotsCount = daySlots.filter(seg => 
-      scheduler.history.some((h: any) => h.dayIndex === dayIndex && h.segmento === seg)
-    ).length;
-
-    if (completedSlotsCount >= daySlots.length) {
-      scheduler.currentDayIndex = (dayIndex % 30) + 1;
-    }
-
+    scheduler.active = !scheduler.active;
     await saveBlueskyScheduler(scheduler);
-
-    mockThreads.unshift({
-      id: "thread_sch_" + Date.now(),
-      timestamp: new Date().toISOString(),
-      posts: [{ text: texto }],
-      likes: Math.floor(Math.random() * 20) + 10,
-      reposts: Math.floor(Math.random() * 5) + 1,
-      replies: 0,
-      automated: true,
-    });
-
-    mockLogs.unshift({
-      id: String(mockLogs.length + 1),
-      timestamp: new Date().toLocaleTimeString(),
-      level: realUri.startsWith("mock") ? "INFO" : "SUCCESS",
-      category: "BLUESKY",
-      message: realUri.startsWith("mock")
-        ? `[SIMULATED AUTO] Dispatched mock Day ${dayIndex} (${segmento}) successfully (no real .env credentials).`
-        : `[SCHEDULER FORCE] Dispatched Day ${dayIndex} (${segmento}) successfully to real Bluesky: ${realUri}`
-    });
-
-    return res.json({
-      success: true,
-      postedSegment: segmento,
-      dayIndex,
-      uri: realUri,
-      simulated: realUri.startsWith("mock")
-    });
-
-  } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.json({ success: true, active: scheduler.active });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to toggle scheduler" });
   }
 });
 
@@ -1132,50 +629,57 @@ app.post("/api/threads/publish", async (req, res) => {
     return res.status(400).json({ error: "Invalid posts data" });
   }
 
-  const rawStrings = posts.map(p => typeof p === "string" ? p : (p.text || ""));
+  try {
+    const postsArray = posts.map(p => p.text || p);
+    const publishResult = await publishThreadToBluesky(postsArray);
+    
+    const newThread = {
+      id: "thread_" + Date.now(),
+      timestamp: new Date().toISOString(),
+      posts: posts.map(p => ({ text: p.text || p })),
+      likes: 0,
+      reposts: 0,
+      replies: 0,
+      automated: !!automated,
+      uri: publishResult?.[0]?.uri,
+      cid: publishResult?.[0]?.cid
+    };
 
-  let realUri = null;
-  let realCid = null;
-  let simulatedMessage = "";
+    mockThreads.unshift(newThread);
+    
+    // Also push a system log
+    mockLogs.unshift({
+      id: String(mockLogs.length + 1),
+      timestamp: new Date().toLocaleTimeString(),
+      level: "SUCCESS",
+      category: "BLUESKY",
+      message: `Newly composed thread of ${posts.length} posts successfully published to ${publishResult ? "real Bluesky network" : "simulated timeline"}.`
+    });
 
-  const username = process.env.BLUESKY_USERNAME;
-  const password = process.env.BLUESKY_APP_PASSWORD;
-  const hasRealCreds = !!(username && password && username !== "MY_BLUESKY_USERNAME" && password !== "MY_BLUESKY_APP_PASSWORD");
-
-  if (hasRealCreds) {
-    console.log("📡 [BLUESKY] Publishing manual thread of size:", rawStrings.length);
-    const result = await publishThreadToBluesky(rawStrings);
-    if (result && result.length > 0) {
-      realUri = result[0].uri;
-      realCid = result[0].cid;
-    } else {
-      simulatedMessage = " (Erro ao conectar com API do Bluesky)";
-    }
+    res.json(newThread);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  const newThread = {
-    id: "thread_" + Date.now(),
-    timestamp: new Date().toISOString(),
-    posts: rawStrings.map(t => ({ text: t })),
-    likes: 0,
-    reposts: 0,
-    replies: 0,
-    automated: !!automated,
-  };
+app.post("/api/waitlist", async (req, res) => {
+  const { name, phone, email, bluesky_handle } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: "Name is required for waitlist." });
+  }
+  try {
+    // Combine handle/email into handle for the addWaitlistEntry function if needed, or update the function
+    const contactInfo = email || bluesky_handle || "N/A";
+    await addWaitlistEntry(name, phone || "N/A", contactInfo);
+    res.json({ success: true, message: "Added to waitlist." });
+  } catch (err: any) {
+    console.error("Failed to add to waitlist:", err);
+    res.status(500).json({ success: false, error: err.message || "Failed to add to waitlist." });
+  }
+});
 
-  mockThreads.unshift(newThread);
-  
-  mockLogs.unshift({
-    id: String(mockLogs.length + 1),
-    timestamp: new Date().toLocaleTimeString(),
-    level: hasRealCreds && realUri ? "SUCCESS" : "INFO",
-    category: "BLUESKY",
-    message: hasRealCreds && realUri 
-      ? `Successfully published Thread (size: ${rawStrings.length}) to real Bluesky network! Uri: ${realUri}`
-      : `Manual thread of ${posts.length} posts published to simulated timeline${simulatedMessage}`
-  });
-
-  res.json({ ...newThread, realUri, realCid });
+app.get("/waitlist", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "dist", "waitlist.html"));
 });
 
 // AI Agent Query Endpoint powered by server-side Gemini
@@ -1204,17 +708,17 @@ Avoid sales pitch or overly flowery language. Maintain the standard economic int
   try {
     if (ai) {
       systemStatus = "running";
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: query,
-        config: {
-          systemInstruction: systemInstruction,
+      const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: query }] }],
+        generationConfig: {
           temperature: 0.7,
         },
       });
+      const response = await result.response;
       systemStatus = "idle";
       
-      const responseText = response.text || "Desculpe, não consegui processar a análise no momento.";
+      const responseText = response.text() || "Desculpe, não consegui processar a análise no momento.";
       
       // Log the successful query
       mockLogs.unshift({
@@ -1260,7 +764,7 @@ async function startServer() {
   }
 
   // Initialize SQLite schema and seed on boot
-  console.log("Initializing SQLite database store...");
+  console.log("Initializing database store...");
   try {
     await initDb();
     await seedFromPublicApis();
@@ -1279,37 +783,18 @@ async function startServer() {
     if (selicHist.length > 0) {
       currentSelic = selicHist[selicHist.length - 1].price;
     }
-    console.log(`📡 SQLite loaded successfully. Initial Brent=$${currentBrent}, TTF=€${currentTtf}, Selic=${currentSelic}`);
+    console.log(`📡 Database loaded successfully. Initial Brent=$${currentBrent}, TTF=€${currentTtf}, Selic=${currentSelic}`);
   } catch (dbErr) {
-    console.error("Failed to bootstrap SQLite tables and seed data, falling back to static config:", dbErr);
+    console.error("Failed to bootstrap database tables and seed data, falling back to static config:", dbErr);
   }
 
-  // Run Bluesky Scheduler on startup
-  console.log("⏰ [SCHEDULER] Triggering Bluesky Scheduler on boot...");
-  try {
-    await runBlueskySchedulerCycle();
-  } catch (e) {
-    console.error("Error running Bluesky Scheduler on boot:", e);
-  }
-
-  // Periodic Bluesky Scheduler. Run every 60 seconds to check time thresholds.
-  setInterval(async () => {
-    await runBlueskySchedulerCycle();
-  }, 60 * 1000);
-
-  // Daily Background Updater. Refresh prices of indexes and Judicial Recovery (R.J.) stock charts every 24 hours.
-  setInterval(async () => {
-    console.log("⏰ [SCHEDULER] Triggering automatic daily background database refresh...");
-    try {
-      await seedFromPublicApis();
-      console.log("✅ [SCHEDULER] Daily background database refresh finished successfully.");
-    } catch (err) {
-      console.error("❌ [SCHEDULER] Daily background database refresh failed:", err);
-    }
-  }, 24 * 60 * 60 * 1000);
+  // Start background scheduler
+  setInterval(runBlueskySchedulerCycle, 60000); // Check every minute
+  runBlueskySchedulerCycle(); // Initial run
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Selix running on port ${PORT}`);
+    console.log(`Capacity Control: ${getMaxCapacity()} users, Promotional Time: 15 minutes.`);
   });
 }
 

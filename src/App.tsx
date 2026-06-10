@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert, ArrowRight, Play, CheckCircle } from "lucide-react";
 import IndicadoresMacro from "./components/IndicadoresMacro";
 import EmpresasRJ from "./components/EmpresasRJ";
@@ -39,7 +39,14 @@ export default function App() {
     cpuTemp: 52,
     ramUsed: 110,
     lastCheck: "",
+    activeUsers: 0,
+    maxCapacity: 0,
+    capacityReached: false,
+    firstAccess: null,
   });
+
+  const [promotionalTimeLeft, setPromotionalTimeLeft] = useState<number | null>(null);
+  const promotionalTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isLoadingState, setIsLoadingState] = useState(true);
   const [isAiPending, setIsAiPending] = useState(false);
@@ -219,8 +226,12 @@ export default function App() {
         setRating(data.rating ?? "BBB-");
         setInvestmentGrade(!!data.investmentGrade);
         setSystemWatchdog(data.system);
-        setSimultaneousUsers(data.simultaneousUsers ?? 8);
-        setMaxAllowedUsers(data.maxAllowedUsers ?? 20);
+        setSimultaneousUsers(data.system.activeUsers ?? 8);
+        setMaxAllowedUsers(data.system.maxCapacity ?? 20);
+        if (data.system.firstAccess) {
+          const timeLeft = data.system.firstAccess + (15 * 60 * 1000) - Date.now();
+          setPromotionalTimeLeft(Math.max(0, timeLeft));
+        }
         if (data.brentHistory) {
           setBrentHistory(data.brentHistory);
         }
@@ -314,8 +325,31 @@ export default function App() {
     const interval = setInterval(() => {
       fetchLogs();
     }, 12000);
-    return () => clearInterval(interval);
-  }, []);
+
+    // Set up promotional timer countdown
+    if (promotionalTimerRef.current) {
+      clearInterval(promotionalTimerRef.current);
+    }
+    promotionalTimerRef.current = setInterval(() => {
+      setPromotionalTimeLeft(prev => {
+        if (prev === null) return null;
+        const newTime = prev - 1000;
+        if (newTime <= 0) {
+          clearInterval(promotionalTimerRef.current!); // Stop timer when it reaches 0
+          window.location.href = '/waitlist'; // Redirect to waitlist
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      if (promotionalTimerRef.current) {
+        clearInterval(promotionalTimerRef.current);
+      }
+    };
+  }, [systemWatchdog.firstAccess]);
 
   // Update Brent/TTF/Selic/Sentiment and sync to backend
   const handleUpdateBrent = async (newValue: number) => {
@@ -429,14 +463,13 @@ export default function App() {
   // Call the RAG assistant query server route (proxies to Gemini)
   const handleCallAgentQuery = async (query: string) => {
     setIsAiPending(true);
-    const pConfig = SELIX_PERSONAS.find(p => p.id === activePersona) || SELIX_PERSONAS[0];
     try {
       const res = await fetch("/api/agent-query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: `[Foco do Perfil: ${pConfig.name}. Diretriz analítica: ${pConfig.geminiFocusPrompt}] ${query}`,
-          customData: { brent, selic, sentiment, activePersona }
+          query,
+          customData: { brent, selic, sentiment }
         }),
       });
       if (res.ok) {
@@ -454,19 +487,13 @@ export default function App() {
     }
   };
 
-  // Generate newly formatted economic economic thread with server-side Gemini
-  const handleGenerateThreadAI = async (overridePersona?: string): Promise<string[] | null> => {
+  // Generate newly formatted economic thread with server-side Gemini
+  const handleGenerateThreadAI = async (): Promise<string[] | null> => {
     setIsThreadGenerating(true);
-    const selectedPersonaId = overridePersona || activePersona;
-    const pConfig = SELIX_PERSONAS.find(p => p.id === selectedPersonaId) || SELIX_PERSONAS[0];
     try {
-      const prompt = `Você é um analista agindo estritamente do ponto de vista do perfil '${pConfig.name}'. 
-Slogan do Perfil: ${pConfig.slogan}
-Diretriz de Escrita e Viés: ${pConfig.geminiFocusPrompt}
-
-Gere uma thread econômica brasileira altamente customizada para este perfil em formato de array de string JSON, dividida exatamente em 3 partes curtas, para postagem na timeline do @zeh-sobrinho.bsky.social.
-Crie uma análise técnica correspondente em Português considerando que o petróleo Brent está em USD ${brent.toFixed(2)}, o Gás Natural TTF Europeu em €${ttf.toFixed(2)} EUR/MWh, a Selic nacional em ${selic.toFixed(2)}% ao ano, o sentimento em ${sentiment}/100 e a situação de rating soberano: '${rating}' (${investmentGrade ? "com selo de Grau de Investimento" : "Nível especulativo"}).
-Destaque o impacto na perspectiva e prioridades de ${pConfig.name}. Se o perfil for 'Energia & Clima', dê foco absoluto na bio-estratégia verde de blends Ex/Bx desenvolvida pelo Ministério de Minas e Energia (MME). Se for 'Trabalhador', dê foco no impacto no salário real, poder de compra familiar e PLR retido pelas empresas em RJ. Se for 'Setor Produtivo', debêntures corporativas e WACC. If 'Mercado', prêmio de risco, di futuro, valuation descontado.
+      const prompt = `Gere uma thread econômica altamente inspiradora em formato de array de string JSON, dividida exatamente em 3 partes curtas, para postagem na timeline do @zeh-sobrinho.bsky.social.
+Crie uma análise técnica e objetiva em Português considerando que o petróleo Brent está em USD ${brent.toFixed(2)}, o Gás Natural TTF Europeu em €${ttf.toFixed(2)} EUR/MWh, a Selic nacional em ${selic.toFixed(2)}% ao ano, o sentimento em ${sentiment}/100 e a situação de rating soberano: '${rating}' (${investmentGrade ? "com selo de Grau de Investimento" : "Nível especulativo"}).
+Destaque com orgulho como a bio-estratégia verde desenvolvida pelo Ministério de Minas e Energia (MME) e Ministério do Meio Ambiente (MMA) - com blends compulsórios de Etanol e Biodiesel + biogás (misturas Ex/Bx) - cria um amortecedor contra choques de Brent e TTF Gás, aliviando a meta SELIC do Banco Central para um dígito (9.25% a.a.) sem precisar queimar divisas, promovendo o rating soberano nacional para A+ e consagrando o Brasil com o selo internacional de Grau de Investimento (Investment Grade).
 Cite ou copie com destaque os stakeholders envolvidos como @zeh-sobrinho.bsky.social, MME, MMA e SELIX.
 Formato estrito do retorno: Responda APENAS com um array JSON válido contendo exatamente 3 mensagens curtas adequadas para o limite de caracteres de uma publicação (máximo de 300 caracteres cada). Não adicione markdown externo adicional (sem blockquotes de crase), apenas o texto limpo do JSON ["frase 1", "frase 2", "frase 3"]`;
 
@@ -510,45 +537,6 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
     { date: "2026-06-06", brent: brent, selic: selic, sentiment: sentiment },
   ];
 
-  const getThemeColors = () => {
-    const accent = currentUser?.customizations?.themeAccent || "indigo";
-    switch (accent) {
-      case "violet":
-        return {
-          glowPrimary: "bg-violet-600/10",
-          glowSecondary: "bg-indigo-600/5",
-          accentColor: "violet",
-        };
-      case "emerald":
-        return {
-          glowPrimary: "bg-emerald-600/10",
-          glowSecondary: "bg-teal-600/5",
-          accentColor: "emerald",
-        };
-      case "sky":
-        return {
-          glowPrimary: "bg-sky-400/10",
-          glowSecondary: "bg-blue-600/5",
-          accentColor: "sky",
-        };
-      case "gray":
-        return {
-          glowPrimary: "bg-slate-500/10",
-          glowSecondary: "bg-slate-700/5",
-          accentColor: "slate",
-        };
-      case "indigo":
-      default:
-        return {
-          glowPrimary: "bg-indigo-600/10",
-          glowSecondary: "bg-violet-600/5",
-          accentColor: "indigo",
-        };
-    }
-  };
-
-  const themeColors = getThemeColors();
-
   if (isLoadingState) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-mono text-xs text-amber-500 gap-3">
@@ -561,8 +549,8 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden font-sans" id="selic-app-viewport">
       {/* Decorative ambient gradients */}
-      <div className={`absolute top-[-10%] left-[-15%] w-[50%] h-[50%] ${themeColors.glowPrimary} blur-[120px] rounded-full pointer-events-none`} />
-      <div className={`absolute bottom-[-10%] right-[-15%] w-[50%] h-[50%] ${themeColors.glowSecondary} blur-[120px] rounded-full pointer-events-none`} />
+      <div className="absolute top-[-10%] left-[-15%] w-[50%] h-[50%] bg-violet-600/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-15%] w-[50%] h-[50%] bg-emerald-600/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* COMPACT MAIN HEADER */}
       <header className="border-b border-slate-900 bg-slate-950/60 backdrop-blur px-6 py-4 sticky top-0 z-30 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -584,7 +572,23 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
         </div>
 
         {/* Global stats bar */}
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap font-mono text-3xs text-slate-400" id="global-stats-header">
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap font-mono text-3xs text-slate-400" id="global-stats-header">
+            {systemWatchdog.capacityReached && (
+              <div className="bg-red-950/40 border border-red-500/40 text-red-300 shadow-[0_0_12px_rgba(239,68,68,0.1)] px-2.5 py-1.5 rounded flex items-center gap-1.5 animate-pulse">
+                <AlertCircle className="w-3 h-3" />
+                CAPACIDADE MÁXIMA ATINGIDA! <a href="/waitlist" className="underline text-red-200">Entrar na Lista de Espera</a>
+              </div>
+            )}
+            {promotionalTimeLeft !== null && promotionalTimeLeft > 0 && (
+              <div className="bg-blue-950/40 border border-blue-500/40 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.1)] px-2.5 py-1.5 rounded flex items-center gap-1.5">
+                <RefreshCcw className="w-3 h-3 animate-spin" />
+                TEMPO PROMOCIONAL: <strong className="text-blue-200">{Math.floor(promotionalTimeLeft / 60000).toString().padStart(2, '0')}:{Math.floor((promotionalTimeLeft % 60000) / 1000).toString().padStart(2, '0')}</strong>
+              </div>
+            )}
+            <div className="bg-slate-900 border border-slate-850 px-2.5 py-1.5 rounded flex items-center gap-1.5">
+              <Server className="w-3 h-3" />
+              USUÁRIOS ATIVOS: <strong className="text-slate-200">{systemWatchdog.activeUsers}/{systemWatchdog.maxCapacity}</strong>
+            </div>
           <div className="bg-slate-900 border border-slate-850 px-2.5 py-1.5 rounded flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             BRENT: <strong className="text-emerald-400">${brent.toFixed(2)}</strong>
@@ -603,320 +607,51 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           </div>
           <div className={`border px-2.5 py-1.5 rounded flex items-center gap-1.5 transition-colors duration-500 ${investmentGrade ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.1)]" : "bg-slate-900 border-slate-850 text-slate-500"}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${investmentGrade ? "bg-emerald-400 animate-pulse" : "bg-slate-600"}`} />
-            SÕVERANO: <strong className={investmentGrade ? "text-emerald-400 font-extrabold" : "text-slate-400"}>{rating}</strong>
-            {investmentGrade && <span className="text-[8px] font-black bg-emerald-500 text-slate-950 px-1 rounded uppercase tracking-tighter shadow-sm">INV GRADE</span>}
+            RATING: <strong className={investmentGrade ? "text-emerald-400" : "text-slate-400"}>{rating}</strong>
           </div>
-          <button
-            onClick={handleReloadRealTime}
-            disabled={isSyncingLive}
-            className={`p-1.5 px-3 border rounded text-xs transition-all flex items-center gap-1.5 font-bold font-mono cursor-pointer ${
-              isSyncingLive
-                ? "bg-emerald-950/40 border-emerald-500/50 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
-                : "bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-400 hover:text-indigo-400"
-            }`}
-            title="Coletar dados reais das APIs públicas e persistir no SQLite"
-          >
-            <RefreshCcw className={`w-3.5 h-3.5 ${isSyncingLive ? "animate-spin text-emerald-400" : ""}`} />
-            {isSyncingLive ? "CRAWLING..." : "LIVE SYNC"}
-          </button>
-
-          {/* User Sign-In/Auth area */}
-          <UserLoginArea
-            currentUser={currentUser}
-            onLoginSuccess={handleLoginSuccess}
-            onLogout={handleLogout}
-          />
         </div>
+
+        {/* User Login / Profile area */}
+        <UserLoginArea 
+          user={currentUser} 
+          onLoginSuccess={handleLoginSuccess} 
+          onLogout={handleLogout}
+          onUpdateCustomizations={handleUpdateCustomizations}
+        />
       </header>
 
-      {/* DASHBOARD CONTAINER - BENTO GRID DESIGN */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6" id="dashboard-content">
-        
-        {/* Guia de Explanacao por Voz */}
-        <GuiaDeVoz
-          brent={brent}
-          selic={selic}
-          sentiment={sentiment}
-          watchdogStatus={systemWatchdog.status}
-          watchdogRam={systemWatchdog.ramUsed}
-          activePersonaId={activePersona}
-        />
+      {/* SUB-HEADER PERSONA SELECTOR */}
+      <div className="bg-slate-900/40 border-b border-slate-900 px-6 py-2 flex items-center gap-6 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 text-3xs font-mono text-slate-500 whitespace-nowrap">
+          <Users className="w-3 h-3" />
+          PERSONA ATIVA:
+        </div>
+        <div className="flex items-center gap-1">
+          {Object.entries(SELIX_PERSONAS).map(([key, p]) => (
+            <button
+              key={key}
+              onClick={() => setActivePersona(key)}
+              className={`px-3 py-1 rounded-full text-3xs font-bold transition-all whitespace-nowrap border ${activePersona === key ? "bg-amber-500/10 border-amber-500/50 text-amber-400" : "bg-slate-900/50 border-slate-800 text-slate-500 hover:border-slate-700"}`}
+            >
+              {p.label.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* TARGET PERSONA WORKSPACE PANEL */}
-        <section className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 space-y-4 backdrop-blur shadow-xl relative" id="persona-workspace-section">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full pointer-events-none" />
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        {/* LEFT COLUMN: Indicators & Analysis */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 custom-scrollbar scroll-smooth" id="left-column-main">
           
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-slate-850 pb-3">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded bg-indigo-950 text-indigo-400">
-                <Sparkles className="w-4 h-4 animate-spin-slow" />
-              </span>
-              <div>
-                <h2 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider block">
-                  Seletor de Perfil de Público-Alvo: Adaptabilidade Geral
-                </h2>
-                <div className="text-4xs text-slate-500 font-mono">
-                  CLIQUE EM UM PERFIL DE INTERESSE ABAIXO PARA ADAPTAR A EXPERIÊNCIA DO DASHBOARD EM TEMPO REAL.
-                </div>
-              </div>
-            </div>
-            <div className="text-3xs font-mono bg-indigo-950/40 text-indigo-400 border border-indigo-905/30 rounded px-2.5 py-1 flex items-center gap-1.5 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-              MODO ATIVO: <strong className="uppercase">{activePersona}</strong>
-            </div>
-          </div>
-
-          {/* Persona quick select grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2" id="persona-tabs-bar">
-            {SELIX_PERSONAS.map((p) => {
-              const isSelected = activePersona === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setActivePersona(p.id);
-                  }}
-                  className={`p-2.5 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between h-20 ${
-                    isSelected
-                      ? "bg-slate-900 border-indigo-500 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.1)]"
-                      : "bg-slate-950/60 border-slate-850 hover:bg-slate-850 text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-base select-none">{p.emoji}</span>
-                    {isSelected && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-extrabold text-[10px] block truncate select-none leading-tight">{p.name}</span>
-                    <span className="text-[7.5px] text-slate-500 block truncate select-none font-mono mt-0.5">{p.role}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Active Persona Insight Showcase Widget */}
-          {(() => {
-            const currentPersona = SELIX_PERSONAS.find((p) => p.id === activePersona) || SELIX_PERSONAS[0];
-            const metrics = calculatePersonaSpecificMetrics(activePersona, brent, selic, ttf) as any;
-            
-            return (
-              <div className="bg-slate-950/80 border border-slate-855 rounded-lg p-4 grid grid-cols-1 lg:grid-cols-3 gap-5 animate-fade-in" id="persona-workbench">
-                {/* Information Column */}
-                <div className="lg:col-span-1 space-y-3 border-r border-slate-900 pr-5 flex flex-col justify-between h-full">
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-lg">{currentPersona.emoji}</span>
-                      <h3 className="font-bold text-slate-200 text-xs tracking-tight font-sans">
-                        Foco de Interesse do {currentPersona.name}
-                      </h3>
-                    </div>
-                    <p className="text-[10px] text-slate-500 font-sans leading-relaxed mt-1">
-                      {currentPersona.slogan}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 bg-slate-900/40 p-2.5 rounded border border-slate-855 font-mono text-[9px]">
-                    <span className="text-slate-550 text-[7px] uppercase block mb-1">MÉTRICAS DE ATENÇÃO:</span>
-                    {currentPersona.focusHighlights.map((hl, k) => (
-                      <div key={k} className="flex items-center gap-1.5 text-slate-400">
-                        <CheckCircle className="w-3 h-3 text-indigo-400 shrink-0" />
-                        <span>{hl}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Analytical Action / Calculations widget */}
-                <div className="lg:col-span-2 flex flex-col justify-between gap-4">
-                  <div>
-                    <span className="text-[7.5px] font-mono text-indigo-400 bg-indigo-950/40 border border-indigo-900/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider mb-2 inline-block">
-                      {currentPersona.badgeText} INTERACTION PLATFORM
-                    </span>
-                    
-                    {/* Dynamic view selection per profile mode */}
-                    {activePersona === "jornalista" && (
-                      <div className="space-y-3 font-mono text-3xs">
-                        <div className="space-y-1">
-                          <label className="text-slate-550 uppercase font-black text-[7px]">Pre-manchete Factual Sugerida (Fact-Checked):</label>
-                          <div className="bg-slate-900 border border-slate-850 rounded p-2 text-slate-300 leading-relaxed font-sans text-[10px] relative">
-                            {metrics.pressReadinessHeadline}
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(metrics.pressReadinessHeadline);
-                              }}
-                              className="absolute right-2 top-2 p-1 bg-slate-950 hover:bg-slate-800 rounded border border-slate-800 text-[8px] text-indigo-450 uppercase select-none cursor-pointer"
-                            >
-                              Copiar
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-1 font-mono text-[9px] text-slate-400">
-                          <span>Índice de Confiabilidade Editorial:</span>
-                          <span className="text-emerald-450 font-extrabold">{metrics.factCheckTruthRating.toFixed(1)}% Verificado</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activePersona === "economista" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
-                          <span className="text-slate-550 text-[7px] uppercase block">Gini Projetado (Selic {selic}%)</span>
-                          <span className="text-[11px] font-bold text-slate-200 mt-1 block">{(metrics.giniSimulated * 10).toFixed(3)}</span>
-                          <span className="text-[7px] text-rose-500 font-sans block mt-0.5">Selic alta eleva concentração patrimonial</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Transferência Rentista (Anual)</span>
-                          <span className="text-[11px] font-bold text-rose-400 mt-1 block">R$ {metrics.rentismTransferBillions.toFixed(1)} Bi</span>
-                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Pagamento de juros aos credores da dívida</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Alíquota Dividendo Sugerida</span>
-                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.dividendSurtaxPercent.toFixed(2)}%</span>
-                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Para restabelecer neutralidade social</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activePersona === "politico" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
-                          <span className="text-slate-550 text-[7px] uppercase block">Aprovação Popular Estimada</span>
-                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.popularApprovalPercent.toFixed(1)}%</span>
-                          <span className="text-[7px] text-emerald-500 font-sans block mt-0.5">Aprovação sobe com juros mais baixos</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Resistência do Congresso</span>
-                          <span className="text-[11px] font-bold text-rose-400 mt-1 block">{metrics.congressionalCoalitionResistance.toFixed(1)}/100</span>
-                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Pressão do Congresso por juros altos</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Encargo da Dívida pública</span>
-                          <span className="text-[11px] font-bold text-slate-300 mt-1 block">R$ {metrics.publicDebtInterestCostBillions.toFixed(1)} Bi / ano</span>
-                          <span className="text-[7px] text-slate-550 font-sans block mt-0.5">Gasto exclusivo com juros rolagem</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activePersona === "empresario" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
-                          <span className="text-slate-550 text-[7px] uppercase block">WACC Médio Corporativo</span>
-                          <span className="text-[11px] font-bold text-rose-405 mt-1 block">{metrics.genericWacc.toFixed(2)}%</span>
-                          <span className="text-[7px] text-rose-500 block mt-0.5">Taxa básica {selic}% + prêmio 4.5%</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">WACC Reprojetado (Selic 9%)</span>
-                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.reprojectedWacc.toFixed(2)}%</span>
-                          <span className="text-[7px] text-emerald-500 block mt-0.5">Economia substancial na rolagem de dívida</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Média EBITDA da Indústria</span>
-                          <span className="text-[11px] font-bold text-slate-205 mt-1 block">{metrics.genericEbitdaMargin.toFixed(2)}%</span>
-                          <span className="text-[7px] text-slate-550 block mt-0.5">Margem esmagada por juros CDI</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activePersona === "ambientalista" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
-                          <span className="text-slate-550 text-[7px] uppercase block">Paridade Etanol / Gasolina</span>
-                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{(metrics.ethanolGasParityRatio * 100).toFixed(1)}%</span>
-                          <span className="text-[7px] text-slate-550 block mt-0.5">Limite de viabilidade econômica</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Mistura Mandatária Biodiesel</span>
-                          <span className="text-[11px] font-bold text-slate-100 mt-1 block">{metrics.biodieselMandatoryBlendPercent}% (B{metrics.biodieselMandatoryBlendPercent})</span>
-                          <span className="text-[7px] text-slate-550 block mt-0.5">Blends compulsórios Ex/Bx do MME</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Crédito Descarbonização (CBIO)</span>
-                          <span className="text-[11px] font-bold text-teal-400 mt-1 block">USD ${metrics.decarbonizationCreditPriceUSD.toFixed(2)}</span>
-                          <span className="text-[7px] text-slate-550 block mt-0.5 font-sans">Preço de atacado por tonelada poupada</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activePersona === "trabalhador" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
-                          <span className="text-slate-550 text-[7px] uppercase block">Cesta Básica Estimada</span>
-                          <span className="text-[11px] font-bold text-rose-400 mt-1 block">R$ {metrics.basicBasketCost.toFixed(2)}</span>
-                          <span className="text-[7px] text-slate-500 block">Pesquisa de custo de alimentos</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Salários Mínimos p/ Cesta</span>
-                          <span className="text-[11px] font-bold text-slate-100 mt-1 block">{(metrics.minimumWagesRequired * 10).toFixed(2)}% de um salário militar</span>
-                          <span className="text-[7px] text-slate-500 block">Proporção diária necessária</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Fator Prestação Parcelado</span>
-                          <span className="text-[11px] font-bold text-rose-455 mt-1 block">+{(metrics.installmentRateFactor * 100 - 100).toFixed(1)}% Juros</span>
-                          <span className="text-[7px] text-slate-500 block">Acréscimo no crediário básico familiar</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {activePersona === "investidor" && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-3xs">
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-850">
-                          <span className="text-slate-550 text-[7px] uppercase block">Custo Equity Requerido (Ke)</span>
-                          <span className="text-[11px] font-bold text-indigo-400 mt-1 block">{metrics.discountRate.toFixed(2)}%</span>
-                          <span className="text-[7px] text-slate-500 block font-sans">Taxa de desconto Gordon</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-550 text-[7px] uppercase block">Múltiplo de Lucro Justo</span>
-                          <span className="text-[11px] font-bold text-emerald-400 mt-1 block">{metrics.genericTerminalMultiple.toFixed(1)}x P/L</span>
-                          <span className="text-[7px] text-slate-500 block font-sans">Múltiplo implícito de retorno terminal</span>
-                        </div>
-                        <div className="bg-slate-900 p-2.5 rounded border border-slate-855">
-                          <span className="text-slate-555 text-[7px] uppercase block">Sovereign CDS 5 Years</span>
-                          <span className="text-[11px] font-bold text-slate-300 mt-1 block">{metrics.countryRiskCds.toFixed(0)} bps</span>
-                          <span className="text-[7px] text-slate-500 block font-sans">Prêmio implícito contra default</span>
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-slate-900/60 pt-3 text-3xs font-mono text-slate-500">
-                    <div>
-                      *Todos os dados cognitivos recalculam instantaneamente ao mover os simuladores de commodities.
-                    </div>
-                    <div className="text-indigo-400 text-3xs flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Fórmula de Consistência Formal Lean 4 Ativa
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </section>
-
-        {/* Premium Customization Control Panel */}
-        {currentUser && (
-          <PremiumControlPanel
-            currentUser={currentUser}
-            onUpdateCustomizations={handleUpdateCustomizations}
-          />
-        )}
-        
-        {/* ROW 1: Macro Charts & AI Assistant / Bluesky Simulation split */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6" id="bento-row-1">
-          {/* Section 1A: Live economic gauges and mathematical models */}
-          <div className="xl:col-span-2 flex flex-col gap-6" id="indicators-wrapper">
-            <IndicadoresMacro
-              data={dynamicHistoricalRecords}
-              brent={brent}
-              ttf={ttf}
-              selic={selic}
-              sentiment={sentiment}
-              rating={rating}
-              investmentGrade={investmentGrade}
+          {/* TOP GRID: REAL TIME DATA CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <IndicadoresMacro 
+              brent={brent} 
+              ttf={ttf} 
+              selic={selic} 
+              sentiment={sentiment} 
+              brentHistory={brentHistory}
+              ttfHistory={ttfHistory}
               onUpdateBrent={handleUpdateBrent}
               onUpdateTtf={handleUpdateTtf}
               onUpdateSelic={handleUpdateSelic}
@@ -924,326 +659,234 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
             />
           </div>
 
-          {/* Section 1B: RAG Economic Copilot Terminal (server-side Gemini) */}
-          <div className="xl:col-span-1" id="analyst-wrapper">
-            <ConsolaAnalista
-              onSendMessage={handleCallAgentQuery}
-              isPending={isAiPending}
-            />
+          {/* MIDDLE SECTION: PERSONA INSIGHTS & ANALYST */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7 space-y-6">
+               <ConsolaAnalista 
+                  persona={SELIX_PERSONAS[activePersona as keyof typeof SELIX_PERSONAS]}
+                  metrics={calculatePersonaSpecificMetrics(activePersona, { brent, ttf, selic, sentiment, investmentGrade })}
+                  isAiPending={isAiPending}
+                  onQuery={handleCallAgentQuery}
+                  onReloadRealTime={handleReloadRealTime}
+                  isSyncingLive={isSyncingLive}
+               />
+               
+               {/* DISTRESSED ASSETS (RJ) MONITOR */}
+               <EmpresasRJ 
+                  prices={rjPrices} 
+                  stats={rjStats} 
+                  onUpdateStats={handleUpdateRjStats}
+               />
+            </div>
+
+            <div className="lg:col-span-5 space-y-6">
+               <Teoremas />
+               <GuiaDeVoz />
+            </div>
           </div>
         </div>
 
-        {/* ROW 1.5: B3 Listed Distressed Assets under Judicial Recovery (R.J.) Projection Simulator */}
-        <div id="rj-companies-wrapper" className="w-full">
-          <EmpresasRJ 
-            currentSelic={selic} 
-            defaultProjectedSelic={currentUser?.customizations?.customSelicTarget}
-            rjPrices={rjPrices}
-            rjStats={rjStats}
-            onUpdateRjStats={handleUpdateRjStats}
-          />
-        </div>
-
-        {/* ROW 2: Managed Cloud Infrastructure (Subscription) & Bluesky Timeline Publisher */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="bento-row-2">
-          {/* Section 2A: Dynamic Payments & Subscription Setup */}
-          <div id="logs-console-wrapper" className="flex flex-col gap-4">
-            {/* Header Toggles */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+        {/* RIGHT COLUMN: Bluesky Timeline & Logs */}
+        <div className="w-full md:w-[380px] lg:w-[420px] border-l border-slate-900 bg-slate-950/40 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="p-4 border-b border-slate-900 flex items-center justify-between bg-slate-950/40">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-slate-350 uppercase tracking-tight text-[10px] font-bold">GERENCIADOR DE ASSINATURA & PAGAMENTO</span>
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <h2 className="text-xs font-bold tracking-tight text-slate-300">BLUESKY FEED</h2>
               </div>
-              <div className="flex gap-1 bg-slate-950 p-1 rounded-lg border border-slate-850">
-                <button
-                  type="button"
-                  onClick={() => setActiveSecondaryPanel("subscription")}
-                  className={`px-2.5 py-1 rounded transition-all text-3xs font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "subscription" ? "bg-indigo-650 text-slate-100" : "text-slate-550 hover:text-slate-350"}`}
-                >
-                  ⭐ ASSINATURA (CLOUD)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSecondaryPanel("watchdog")}
-                  className={`px-2.5 py-1 rounded transition-all text-xs font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "watchdog" ? "bg-slate-800 text-indigo-400 border border-slate-700" : "text-slate-500 hover:text-slate-400"}`}
-                >
-                  📋 Watchdog (Legacy Termux)
-                </button>
-              </div>
-            </div>
-
-            {activeSecondaryPanel === "subscription" ? (
-              <RegionalBillingPanel
-                activeLocale={activeLocale}
-                onLanguageChange={(newLocale) => {
-                  setActiveLocale(newLocale);
+              <button 
+                onClick={async () => {
+                  const posts = await handleGenerateThreadAI();
+                  if (posts) handlePublishThread(posts);
                 }}
-                currentUser={currentUser}
-                onUpgradeSuccess={handleCheckoutSuccessUpgrade}
-                onAddLog={(message, level, category) => {
-                  const mappedLevel: LogLevel = 
-                    level === "WARNING" ? "WARN" : 
-                    level === "DANGER" ? "CRITICAL" : 
-                    level as LogLevel;
-                  const mappedCategory: LogCategory = 
-                    category === "AI" ? "RAG" : 
-                    category === "MARKET" ? "CRAWLER" : 
-                    category as LogCategory;
-                  handleInjectLog(mappedLevel, mappedCategory, message);
-                }}
-              />
-            ) : (
-              <ConsolaLog
-                logs={logs}
-                watchdog={systemWatchdog}
-                onTriggerSelfHeal={handleTriggerSelfHeal}
-                onInjectLog={handleInjectLog}
-                brent={brent}
-                selic={selic}
-              />
-            )}
-          </div>
-
-          {/* Section 2B: Bluesky Profile and Thread composer (powered by Gemini) */}
-          <div id="bluesky-sim-wrapper">
-            <button 
-              id="trigger-threads-refresh" 
-              onClick={fetchThreads} 
-              className="hidden" 
-              style={{ display: "none" }}
-            />
-            <BlueskySim
-              threads={threads}
-              onPublishThread={handlePublishThread}
-              currentBrent={brent}
-              currentSelic={selic}
-              currentSentiment={sentiment}
-              isGeneratingThread={isThreadGenerating}
-              onGenerateThreadAI={handleGenerateThreadAI}
-            />
-          </div>
-        </div>
-
-        {/* ROW 3: Concurrent Traffic Traffic Control & SQLite Waiting List Registration */}
-        <section className="bg-slate-900/60 border border-slate-900 rounded-xl p-6 space-y-6 backdrop-blur shadow-2xl" id="trafe-control-wrapper">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-850 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg">
-                <Users className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <h2 className="text-sm font-extrabold text-slate-100 tracking-tight font-sans">
-                  MONITOR DE TRÁFEGO CONCORRENTE & REDUNDÂNCIA ATIVA
-                </h2>
-                <p className="text-3xs text-slate-500 font-mono">
-                  Gargalo de Hardware do A23 (Termux, limits 384MB RAM) & Filtro de Lista de Espera ao atingir 90%
-                </p>
-              </div>
+                disabled={isThreadGenerating}
+                className="text-4xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 px-2 py-1 rounded transition-colors disabled:opacity-50 flex items-center gap-1"
+              >
+                {isThreadGenerating ? <RefreshCw className="w-2.5 h-2.5 animate-spin" /> : <Play className="w-2.5 h-2.5" />}
+                AUTO-GENERATE
+              </button>
             </div>
             
-            <div className="flex items-center gap-3 font-mono text-3xs">
-              <div className="bg-slate-950 border border-slate-850 px-2.5 py-1 rounded flex items-center gap-1.5">
-                <span className="text-slate-500">PROMOÇÃO:</span>
-                <strong className="text-violet-400">ATIVADA (5 MIN)</strong>
-              </div>
-              <div className="bg-slate-950 border border-slate-850 px-2.5 py-1 rounded flex items-center gap-1.5">
-                <span className="text-slate-500">LIMITE REGISTRO:</span>
-                <strong className="text-amber-500">90% CAPACIDADE</strong>
-              </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-950/20">
+              <BlueskySim threads={threads} />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* COLUMN 1: Explanation & Simulated Users Config */}
-            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col justify-between">
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
-                  <Clock className="w-3.5 h-3.5" /> METRICAS DE CONCORRÊNCIA
-                </h3>
-                <p className="text-3xs text-slate-450 leading-relaxed font-sans">
-                  O Selix executa localmente dentro da infraestrutura hermética do celular <strong className="text-slate-300">Samsung A23 (Termux Dev Node)</strong>. 
-                  Com limites processuais impostos para evitar sobressaltos e estagnação térmica, o limite seguro foi fixado em <strong className="text-slate-300">20 usuários simultâneos</strong>. 
-                  Atingindo 90% de estresse térmico/processamento (18 usuários ou mais), novos visitantes recebem um tempo de navegação bônus promocional de 5 minutos, sendo encaminhados à nossa lista de espera ativa persistida de forma segura usando <strong className="text-slate-300">SQLite3 local</strong>.
-                </p>
+          <div className="h-[280px] border-t border-slate-900 flex flex-col bg-slate-950/60">
+            <div className="p-3 border-b border-slate-900 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TerminalIcon className="w-3.5 h-3.5 text-slate-500" />
+                <h2 className="text-4xs font-bold tracking-widest text-slate-500 uppercase">System Logs</h2>
               </div>
-
-              <div className="space-y-3 pt-4 border-t border-slate-850/60 font-mono">
-                <div className="flex items-center justify-between text-3xs text-slate-400">
-                  <span>USUÁRIOS SIMULTÂNEOS:</span>
-                  <span className={`font-bold ${simultaneousUsers >= 18 ? "text-amber-400 animate-pulse" : "text-emerald-400"}`}>
-                    {simultaneousUsers} / {maxAllowedUsers} ({Math.round((simultaneousUsers / maxAllowedUsers) * 100)}%)
-                  </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${systemWatchdog.isWatchdogActive ? "bg-emerald-500 animate-pulse" : "bg-slate-600"}`} />
+                  <span className="text-4xs font-mono text-slate-600">WATCHDOG</span>
                 </div>
-                
-                {/* Simulated Users Slider */}
-                <div className="space-y-1">
-                  <input
-                    type="range"
-                    min="0"
-                    max="20"
-                    value={simultaneousUsers}
-                    onChange={(e) => handleUpdateUsers(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  />
-                  <div className="flex justify-between text-[8px] text-slate-600">
-                    <span>Sessão Vazia</span>
-                    <span>90% Alerta</span>
-                    <span>Capacidade Max (20)</span>
-                  </div>
-                </div>
-
-                {/* Capacity Status Card */}
-                {simultaneousUsers >= 18 ? (
-                  <div className="p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 rounded flex items-start gap-2.5 animate-pulse text-3xs">
-                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-amber-450 block font-bold mb-0.5">ALERTA: 90% DA CAPACIDADE ALCANÇADA</strong>
-                      Novos usuários adicionais devem registrar-se na Lista de Espera persistente para liberar tokens de navegação promocional redundantes.
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 rounded flex items-start gap-2.5 text-3xs">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-emerald-400 block font-bold mb-0.5">STATUS DO SMARTPHONE: ESTÁVEL</strong>
-                      Acesso público disponível sem fila de espera ativa. Capacidade excedente disponível para redundância secundária.
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
-
-            {/* COLUMN 2: Waitlist Registration Form */}
-            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col justify-between">
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
-                  <UserPlus className="w-4 h-4" /> REGISTRO DE FILA / REDUNDÂNCIA
-                </h3>
-                <p className="text-3xs text-slate-500 font-sans">
-                  Mesmo estando abaixo de 90% de estresse de hardware, você pode se pré-cadastrar preventivamente para garantir acessibilidade persistente através do segundo nó de redundância autônoma.
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmitWaitlist} className="space-y-3 font-mono text-3xs text-slate-200">
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-400">NOME DO STAKEHOLDER / DEVA:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: José Sobrinho Sobrinho"
-                    value={waitlistName}
-                    onChange={(e) => setWaitlistName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-400">TELEFONE DE CONTATO (SMS/WA):</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Ex: +55 (11) 99999-9999"
-                    value={waitlistPhone}
-                    onChange={(e) => setWaitlistPhone(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-400">BLUESKY HANDLE (@):</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: @zeh-sobrinho.bsky.social"
-                    value={waitlistHandle}
-                    onChange={(e) => setWaitlistHandle(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-805 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
-                  />
-                </div>
-
-                {waitlistSuccess && (
-                  <div className="text-[10px] text-emerald-400 bg-emerald-950/20 border border-emerald-500/20 rounded px-3 py-1.5 mt-2 animate-pulse">
-                    ✓ Registrado com sucesso no banco de dados SQLite local!
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isWaitlistSubmitting}
-                  className="w-full bg-indigo-900 hover:bg-indigo-850 disabled:opacity-50 text-slate-100 font-bold border border-indigo-700 text-3xs px-4 py-2 rounded transition-colors cursor-pointer flex items-center justify-center gap-1.5 uppercase font-mono tracking-wider mt-4"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  {isWaitlistSubmitting ? "REGISTRANDO..." : "REQUISITAR ENTRADA NA FILA"}
-                </button>
-              </form>
+            <div className="flex-1 overflow-hidden">
+              <ConsolaLog logs={logs} watchdog={systemWatchdog} onTriggerSelfHeal={handleTriggerSelfHeal} />
             </div>
-
-            {/* COLUMN 3: Real SQLite Waitlist Database Stored rows */}
-            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col">
-              <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
-                  <List className="w-4 h-4" /> BANCO DE ESPERA (SQLITE FILE)
-                </h3>
-                <span className="text-4xs bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">
-                  {waitlistEntries.length} FILTRADOS
-                </span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto max-h-[220px] pr-1 space-y-2.5 font-mono text-3xs">
-                {waitlistEntries.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-600 text-center py-10">
-                    <Database className="w-8 h-8 opacity-20 mb-2" />
-                    <span>Nenhum registro de fila</span>
-                    <span className="text-[9px] opacity-60">Tabela SQLite SQLite_waitlist ativa</span>
-                  </div>
-                ) : (
-                  waitlistEntries.map((row: any, i: number) => (
-                    <div key={row.id || i} className="p-2.5 bg-slate-900 border border-slate-850 rounded hover:border-slate-800 transition-colors">
-                      <div className="flex items-center justify-between text-slate-400 font-extrabold mb-1">
-                        <span className="text-indigo-400">ID #{row.id || i+1}</span>
-                        <span className="text-[9px] text-slate-600 font-normal">
-                          {new Date(row.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="space-y-0.5 text-[10px]">
-                        <div className="text-slate-300">
-                          Nome: <strong className="text-slate-200">{row.name}</strong>
-                        </div>
-                        <div className="text-slate-500 text-[9px]">
-                          Tel: <strong className="text-slate-400">{row.phone}</strong>
-                        </div>
-                        <div className="text-indigo-400/80 text-[9px]">
-                          Handle: <strong>{row.handle}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
           </div>
-        </section>
-
-        {/* ROW 4: Lean 4 Consistency Proof Mathematics Playground */}
-        <div id="theorems-grounds-wrapper">
-          <Teoremas />
         </div>
-
       </main>
 
-      {/* FOOTER */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-4xs font-mono text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div>
-          DESENVOLVIDO POR <strong className="text-slate-400">ZEH SOBRINHO</strong> — BRASIL
+      {/* PREMIUM UPGRADE & REGIONAL BILLING FLOATING PANEL */}
+      <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-3">
+         <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setActiveSecondaryPanel("subscription")}
+              className={`p-2.5 rounded-full shadow-2xl border transition-all ${activeSecondaryPanel === "subscription" ? "bg-amber-500 border-amber-400 text-slate-950 scale-110" : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"}`}
+              title="Assinatura Premium"
+            >
+              <ShieldCheck className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setActiveSecondaryPanel("watchdog")}
+              className={`p-2.5 rounded-full shadow-2xl border transition-all ${activeSecondaryPanel === "watchdog" ? "bg-violet-600 border-violet-500 text-white scale-110" : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"}`}
+              title="Telemetria Watchdog"
+            >
+              <Database className="w-5 h-5" />
+            </button>
+         </div>
+
+         {activeSecondaryPanel === "subscription" && (
+            <PremiumControlPanel 
+              user={currentUser} 
+              onCheckoutSuccess={handleCheckoutSuccessUpgrade} 
+              activeLocale={activeLocale}
+            />
+         )}
+
+         {activeSecondaryPanel === "watchdog" && (
+            <div className="w-72 bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-xl p-4 shadow-2xl animate-in slide-in-from-left-4 duration-300">
+               <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                    <Database className="w-3.5 h-3.5 text-violet-400" />
+                    TELEMETRIA A23
+                  </h3>
+                  <span className="text-4xs font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">LIVE</span>
+               </div>
+               <div className="space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-4xs font-mono text-slate-500">
+                      <span>CPU TEMP</span>
+                      <span className={systemWatchdog.cpuTemp > 65 ? "text-amber-400" : "text-slate-300"}>{systemWatchdog.cpuTemp}°C</span>
+                    </div>
+                    <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-violet-500 rounded-full transition-all duration-1000" style={{ width: `${(systemWatchdog.cpuTemp / 100) * 100}%` }} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-4xs font-mono text-slate-500">
+                      <span>RAM ALLOCATION</span>
+                      <span className="text-slate-300">{systemWatchdog.ramUsed}MB / 384MB</span>
+                    </div>
+                    <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${(systemWatchdog.ramUsed / 384) * 100}%` }} />
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-slate-800/50">
+                    <div className="flex items-center justify-between text-4xs font-mono text-slate-500">
+                      <span>ESTADO DO DAEMON</span>
+                      <span className="text-emerald-400 uppercase">{systemWatchdog.status}</span>
+                    </div>
+                  </div>
+               </div>
+            </div>
+         )}
+      </div>
+
+      {/* REGIONAL SETTINGS SELECTOR (Bottom Right) */}
+      <div className="fixed bottom-6 right-6 z-50">
+         <RegionalBillingPanel 
+            activeLocale={activeLocale} 
+            onLocaleChange={setActiveLocale} 
+         />
+      </div>
+
+      {/* CAPACITY & WAITLIST MODAL OVERLAY (Optional if capacityReached) */}
+      {systemWatchdog.capacityReached && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-500">
+          <div className="max-w-md w-full bg-slate-900 border border-red-500/30 rounded-2xl p-8 shadow-2xl text-center space-y-6">
+            <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto border border-red-500/20">
+              <ShieldAlert className="w-10 h-10 text-red-500 animate-pulse" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-white tracking-tight">Capacidade Máxima Atingida</h2>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                O SelixIA está operando no limite do hardware A23. Entre na lista de espera para ser notificado assim que uma vaga for liberada.
+              </p>
+            </div>
+
+            {waitlistSuccess ? (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3 text-emerald-400 text-sm animate-in zoom-in duration-300">
+                <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                Sua solicitação foi registrada! Avisaremos você em breve.
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitWaitlist} className="space-y-3 text-left">
+                <div className="space-y-1">
+                  <label className="text-4xs font-bold text-slate-500 uppercase ml-1">Nome Completo</label>
+                  <input 
+                    type="text" 
+                    value={waitlistName}
+                    onChange={(e) => setWaitlistName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all outline-none"
+                    placeholder="Seu nome"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-4xs font-bold text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
+                    <input 
+                      type="tel" 
+                      value={waitlistPhone}
+                      onChange={(e) => setWaitlistPhone(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all outline-none"
+                      placeholder="(00) 00000-0000"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-4xs font-bold text-slate-500 uppercase ml-1">@ Bluesky</label>
+                    <input 
+                      type="text" 
+                      value={waitlistHandle}
+                      onChange={(e) => setWaitlistHandle(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-all outline-none"
+                      placeholder="@usuario.bsky.social"
+                      required
+                    />
+                  </div>
+                </div>
+                <button 
+                  type="submit"
+                  disabled={isWaitlistSubmitting}
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 disabled:opacity-50 mt-4"
+                >
+                  {isWaitlistSubmitting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  ENTRAR NA LISTA DE ESPERA
+                </button>
+              </form>
+            )}
+            
+            <div className="pt-4 flex items-center justify-center gap-6">
+               <div className="flex flex-col items-center gap-1">
+                  <span className="text-2xs font-bold text-white">{simultaneousUsers}/{maxAllowedUsers}</span>
+                  <span className="text-4xs text-slate-500 uppercase tracking-widest">Ocupação</span>
+               </div>
+               <div className="w-px h-8 bg-slate-800" />
+               <div className="flex flex-col items-center gap-1">
+                  <span className="text-2xs font-bold text-white">{waitlistEntries.length}</span>
+                  <span className="text-4xs text-slate-500 uppercase tracking-widest">Na Fila</span>
+               </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span>TERMUX OS DEPLOYMENT TARGET: A23 HARDWARE</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span>ZERO HALLUCINATION BOUNDS COMPILER ACTIVE</span>
-        </div>
-      </footer>
+      )}
     </div>
   );
 }

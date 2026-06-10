@@ -352,6 +352,50 @@ export function getHistoricalPrices(asset: string, limit = 30): Promise<{ price:
   });
 }
 
+// User Profile Management
+export async function saveDbUser(user: any): Promise<void> {
+  const db = getDb();
+  const existingIdx = db.data.users.findIndex(u => u.email === user.email);
+  if (existingIdx !== -1) {
+    db.data.users[existingIdx] = { ...db.data.users[existingIdx], ...user };
+  } else {
+    db.data.users.push(user);
+  }
+  // @ts-ignore
+  db.saveDataToDisk();
+}
+
+export async function getDbUserByEmail(email: string): Promise<any | null> {
+  const db = getDb();
+  return db.data.users.find(u => u.email === email) || null;
+}
+
+// RJ Stats Management
+export async function getRJStats(): Promise<any> {
+  const db = getDb();
+  return db.data.rjStats;
+}
+
+export async function saveRJStats(stats: any): Promise<void> {
+  const db = getDb();
+  db.data.rjStats = stats;
+  // @ts-ignore
+  db.saveDataToDisk();
+}
+
+// Bluesky Scheduler Management
+export async function getBlueskyScheduler(): Promise<any> {
+  const db = getDb();
+  return db.data.blueskyScheduler;
+}
+
+export async function saveBlueskyScheduler(scheduler: any): Promise<void> {
+  const db = getDb();
+  db.data.blueskyScheduler = scheduler;
+  // @ts-ignore
+  db.saveDataToDisk();
+}
+
 // Fetch historical data from public APIs and load them into SQLite
 export async function seedFromPublicApis(): Promise<void> {
   console.log("⚡ SELIX seeding service started. Querying real-time public assets...");
@@ -453,7 +497,7 @@ export async function seedFromPublicApis(): Promise<void> {
   for (const ticker of rjTickers) {
     try {
       const dbKey = ticker.replace(".SA", "").toLowerCase(); // "amer3", "ligt3", etc.
-      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=5d`, {
+      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1mo`, {
         headers: { "User-Agent": userAgent }
       });
       if (res.ok) {
@@ -461,114 +505,14 @@ export async function seedFromPublicApis(): Promise<void> {
         const chartResult = data.chart?.result?.[0];
         if (chartResult) {
           const closes = chartResult.indicators?.quote?.[0]?.close || [];
-          const timestamps = chartResult.timestamp || [];
-          // Find the last valid non-null close price
-          let latestPrice: number | null = null;
-          let latestDateStr = new Date().toISOString().split("T")[0];
-
-          for (let i = closes.length - 1; i >= 0; i--) {
-            if (closes[i] !== null && closes[i] !== undefined) {
-              latestPrice = closes[i];
-              if (timestamps[i]) {
-                latestDateStr = new Date(timestamps[i] * 1000).toISOString().split("T")[0];
-              }
-              break;
-            }
-          }
-
-          if (latestPrice !== null) {
-            await savePrice(dbKey, latestPrice, latestDateStr);
-            console.log(`✅ SQLite: Recuperação Judicial stock ${ticker} updated to R$ ${latestPrice.toFixed(2)} on ${latestDateStr}.`);
+          const lastPrice = closes[closes.length - 1];
+          if (lastPrice !== null && lastPrice !== undefined) {
+            await savePrice(dbKey, lastPrice);
           }
         }
-      } else {
-        console.warn(`⚠️ RJ Ticker ${ticker} fetch status not OK from Yahoo Finance: ${res.status}`);
       }
     } catch (err) {
-      console.error(`❌ Failed to query/seed ${ticker} daily price:`, err);
+      console.error(`❌ Failed to query/seed RJ stock ${ticker}:`, err);
     }
   }
 }
-
-export function saveDbUser(user: any): Promise<void> {
-  return new Promise((resolve) => {
-    const db = getDb() as any;
-    if (!db.data.users) db.data.users = [];
-    const idx = db.data.users.findIndex((u: any) => u.email === user.email);
-    if (idx !== -1) {
-      db.data.users[idx] = { ...db.data.users[idx], ...user };
-    } else {
-      db.data.users.push(user);
-    }
-    db.saveDataToDisk();
-    resolve();
-  });
-}
-
-export function getDbUserByEmail(email: string): Promise<any | null> {
-  return new Promise((resolve) => {
-    const db = getDb() as any;
-    if (!db.data.users) db.data.users = [];
-    const found = db.data.users.find((u: any) => u.email === email);
-    resolve(found || null);
-  });
-}
-
-export function getRJStats(): Promise<any> {
-  return new Promise((resolve) => {
-    const db = getDb() as any;
-    if (!db.data.rjStats) {
-      db.data.rjStats = {
-        totalRjCompanies: 1904,
-        totalPlrRetained: 3200000000,
-        releaseBill: "PL 4363/2021",
-        billAuthor: "Deputado federal Bohn Gass (PT-RS)",
-        lastUpdated: new Date().toISOString().split("T")[0]
-      };
-      db.saveDataToDisk();
-    }
-    resolve(db.data.rjStats);
-  });
-}
-
-export function saveRJStats(stats: any): Promise<void> {
-  return new Promise((resolve) => {
-    const db = getDb() as any;
-    db.data.rjStats = {
-      ...db.data.rjStats,
-      ...stats,
-      lastUpdated: new Date().toISOString().split("T")[0]
-    };
-    db.saveDataToDisk();
-    resolve();
-  });
-}
-
-export function getBlueskyScheduler(): Promise<any> {
-  return new Promise((resolve) => {
-    const db = getDb() as any;
-    if (!db.data.blueskyScheduler) {
-      db.data.blueskyScheduler = {
-        active: true,
-        currentDayIndex: 1,
-        history: []
-      };
-      db.saveDataToDisk();
-    }
-    resolve(db.data.blueskyScheduler);
-  });
-}
-
-export function saveBlueskyScheduler(schedulerState: any): Promise<void> {
-  return new Promise((resolve) => {
-    const db = getDb() as any;
-    db.data.blueskyScheduler = {
-      ...db.data.blueskyScheduler,
-      ...schedulerState
-    };
-    db.saveDataToDisk();
-    resolve();
-  });
-}
-
-
