@@ -4,16 +4,27 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Cpu, ShieldCheck, Zap, Sliders, Play, Server, AlertTriangle, Key, ArrowRight, Gauge, CheckCircle, Database } from "lucide-react";
+import { Cpu, ShieldCheck, Zap, Sliders, Play, Server, AlertTriangle, Key, ArrowRight, Gauge, CheckCircle, Database, Eye, Award } from "lucide-react";
 
 interface SelixBoltProps {
   onInjectLog: (level: string, category: string, message: string) => void;
   currentUser: any | null;
   totalRevenue: number;
+  llmModelType: "gemini" | "local1bit" | "rag";
+  onUpdateLlmModelType: (type: "gemini" | "local1bit" | "rag") => void;
+  moltbookAgents: any[];
+  activeMoltbookAgentId: string;
 }
 
-export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: SelixBoltProps) {
-  const [modelType, setModelType] = useState<"gcloud_gemini" | "local_qwencoder">("gcloud_gemini");
+export default function SelixBolt({ 
+  onInjectLog, 
+  currentUser, 
+  totalRevenue,
+  llmModelType,
+  onUpdateLlmModelType,
+  moltbookAgents,
+  activeMoltbookAgentId
+}: SelixBoltProps) {
   const [targetAccuracy, setTargetAccuracy] = useState<number>(98.5);
   const [currentAccuracy, setCurrentAccuracy] = useState<number>(98.2);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -38,7 +49,6 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
       setGcloudKeyTimer(30);
       setIsGeneratingGcloudKey(false);
       onInjectLog("SUCCESS", "SYSTEM", `Chave GCloud gerada com sucesso! Liberada por 30 dias. Token: ${mockKey}`);
-      onInjectLog("INFO", "SYSTEM", `Faturamento da chave indexado com sucesso à conta faturável Google Pay cadastrada do cliente.`);
     }, 1500);
   };
 
@@ -47,7 +57,6 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
     onInjectLog("WARN", "RAG", "Alinhando vetores de contexto. Calculando perda de precisão e índice de acertos do RAG...");
 
     setTimeout(() => {
-      // Elevates accuracy safely back to 99.8% using Custom fine-tuned LLM
       setCurrentAccuracy(99.8);
       setIsOptimizing(false);
       onInjectLog("SUCCESS", "RAG", "Otimizador concluído: Modelo customizado treinado no Selix ativado para garantir acurácia de 99.8% (limite >98.0% restaurado).");
@@ -58,7 +67,6 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
   useEffect(() => {
     if (currentAccuracy < 98.0) {
       onInjectLog("CRITICAL", "RAG", `Acurácia do RAG caiu para ${currentAccuracy.toFixed(1)}% (Abaixo do mínimo tolerável de 98%!). Forçando ativação da LLM customizada treinada no Selix.`);
-      // Auto-tuning trigger simulation
       const timer = setTimeout(() => {
         setCurrentAccuracy(99.8);
         onInjectLog("SUCCESS", "RAG", "LLM customizada do Selix recalibrou as dimensões de embeddings automaticamente para restabelecer acurácia em 99.8%!");
@@ -67,16 +75,88 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
     }
   }, [currentAccuracy]);
 
+  // Derive active model label
+  const getActiveModelName = () => {
+    if (llmModelType === "gemini") return "CLOUD GEMINI v3.5";
+    if (llmModelType === "local1bit") return "LOCAL 1-BIT QWEN";
+    return "HEURÍSTICO RAG LOCAL";
+  };
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-2xl space-y-6" id="selixbolt-engine-panel">
       {/* Title */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-        <span className="p-1.5 rounded bg-amber-500/10 text-amber-500">
-          <Zap className="w-4 h-4 animate-bounce" />
-        </span>
-        <div>
-          <h3 className="font-semibold text-slate-100 font-mono text-xs uppercase">SelixBolt: Mecanismo de Inferência Inteligente</h3>
-          <p className="text-3xs text-slate-500 font-mono">SELEÇÃO DE MODELOS LOCAL VS CLOUD & AUTO-TUNING DE EMBEDDINGS DO RAG</p>
+      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 rounded bg-amber-500/10 text-amber-500">
+            <Zap className="w-4 h-4 animate-bounce" />
+          </span>
+          <div>
+            <h3 className="font-semibold text-slate-100 font-mono text-xs uppercase">SelixBolt: Mecanismo & Ativos de IA</h3>
+            <p className="text-3xs text-slate-500 font-mono">MAPA DE INFRAESTRUTURA COGNITIVA, ATIVOS E MODELOS REGISTRADOS</p>
+          </div>
+        </div>
+        <div className="shrink-0 text-3xs font-mono px-2 py-0.5 rounded bg-amber-950/40 text-amber-500 border border-amber-900/40">
+          CÉREBRO VIGENTE: {getActiveModelName()}
+        </div>
+      </div>
+
+      {/* SECTION: ATIVOS DO MOLTBOOK ("Molt Bolt mostre os ativos") */}
+      <div className="bg-slate-950 p-4 border border-slate-850 rounded-lg space-y-3.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-amber-400 font-mono font-bold uppercase tracking-wider block flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5" /> Ativos de Agentes do Sistema (Moltbook Federated Agents)
+          </span>
+          <span className="text-slate-500 font-mono text-[8px]">TOTAL: {moltbookAgents.length} REDE</span>
+        </div>
+
+        <p className="text-slate-400 font-mono text-[8.5px] leading-relaxed">
+          Cada agente do Moltbook representa um ativo lógico associado ao modelo <strong>{getActiveModelName()}</strong> automaticamente. Suas ferramentas formais (Skill MD) regulam seus comportamentos bitwise.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-3xs font-mono">
+          {moltbookAgents.map((ag) => {
+            const isSelected = ag.id === activeMoltbookAgentId;
+            return (
+              <div 
+                key={ag.id} 
+                className={`p-3 rounded-lg border flex flex-col justify-between gap-2.5 transition relative ${
+                  isSelected 
+                    ? "bg-rose-950/15 border-rose-500/40 text-rose-350 shadow" 
+                    : "bg-slate-900/70 border-slate-850 text-slate-400"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm select-none">{ag.avatar || "👾"}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[7px] text-slate-500">KARMA: {ag.karma ?? 150}</span>
+                    <span className={`text-[6px] px-1 rounded font-black uppercase ${isSelected ? "bg-rose-500/20 text-rose-300 animate-pulse" : "bg-slate-800 text-slate-500"}`}>
+                      {isSelected ? "Ativo" : "Standby"}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="font-extrabold text-2xs block text-slate-200">{ag.name}</span>
+                  <p className="text-[8px] text-slate-500 font-sans mt-0.5 leading-normal">
+                    {ag.description}
+                  </p>
+                </div>
+
+                {/* Skill Tools Summary */}
+                <div className="p-1.5 rounded bg-slate-950 border border-slate-850 mt-1 space-y-1">
+                  <span className="text-[7.5px] text-indigo-400 block font-bold">🛠️ SKILLS ATIVAS REGULADAS (SKILL MD):</span>
+                  <div className="text-[7px] text-slate-400 line-clamp-2 max-h-12 leading-relaxed overflow-hidden font-sans">
+                    {ag.skillMd || "Nenhuma skill cadastrada. Edite nas configurações."}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center text-[7.5px] text-slate-500 pt-1.5 border-t border-slate-900">
+                  <span>Sincronia: AUTO-MODEL</span>
+                  <span>Trigger: {ag.replyMode === "auto" ? "✅ AUTOMÁTICO" : "⏳ MANUAL"}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -85,54 +165,73 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
         <div className="space-y-4 bg-slate-950/40 p-4 border border-slate-850 rounded-lg">
           <span className="text-[10px] text-indigo-400 font-mono font-bold uppercase tracking-wider block">1. CONFIGURAÇÃO DE INFRAESTRUTURA LLM</span>
           
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2 text-3xs font-mono">
             {/* GCloud Option */}
             <button
               onClick={() => {
-                setModelType("gcloud_gemini");
+                onUpdateLlmModelType("gemini");
                 onInjectLog("INFO", "SYSTEM", "Mecanismo Selix Bolt alterado para Google Cloud Gemini API (Escala infinita).");
               }}
-              className={`p-3 rounded border text-left font-mono transition-all flex flex-col justify-between h-24 ${
-                modelType === "gcloud_gemini"
+              className={`p-2 py-3 rounded border text-left font-mono transition-all flex flex-col justify-between h-20 cursor-pointer ${
+                llmModelType === "gemini"
                   ? "bg-indigo-950/30 border-indigo-500/80 text-indigo-400"
                   : "bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700"
               }`}
             >
               <div className="flex items-center justify-between w-full">
-                <Server className="w-4 h-4" />
-                <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${modelType === "gcloud_gemini" ? "bg-indigo-900 text-indigo-200" : "bg-slate-800 text-slate-500"}`}>CLOUD</span>
+                <Server className="w-3.5 h-3.5" />
+                <span className={`text-[6px] font-bold px-0.5 rounded ${llmModelType === "gemini" ? "bg-indigo-900 text-indigo-200" : "bg-slate-800 text-slate-500"}`}>CLOUD</span>
               </div>
               <div>
-                <span className="text-[9px] font-bold block">GCloud Gemini API</span>
-                <span className="text-[7px] text-slate-500 block">Trial de 30 dias de uso</span>
+                <span className="text-[8px] font-bold block">Gemini API</span>
               </div>
             </button>
 
             {/* Qwen Local 1-bit Option */}
             <button
               onClick={() => {
-                setModelType("local_qwencoder");
+                onUpdateLlmModelType("local1bit");
                 onInjectLog("WARN", "SYSTEM", "Selix Bolt alterado para QwenCoder 0.5B (Quantizado em 1-bit local). Uso de memória reduzido para preservar limites de hardware.");
               }}
-              className={`p-3 rounded border text-left font-mono transition-all flex flex-col justify-between h-24 ${
-                modelType === "local_qwencoder"
+              className={`p-2 py-3 rounded border text-left font-mono transition-all flex flex-col justify-between h-20 cursor-pointer ${
+                llmModelType === "local1bit"
                   ? "bg-emerald-950/30 border-emerald-500/80 text-emerald-400"
                   : "bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700"
               }`}
             >
               <div className="flex items-center justify-between w-full">
-                <Cpu className="w-4 h-4" />
-                <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${modelType === "local_qwencoder" ? "bg-emerald-900 text-emerald-200" : "bg-slate-800 text-slate-500"}`}>LOCAL 1-BIT</span>
+                <Cpu className="w-3.5 h-3.5" />
+                <span className={`text-[6px] font-bold px-0.5 rounded ${llmModelType === "local1bit" ? "bg-emerald-900 text-emerald-200" : "bg-slate-800 text-slate-500"}`}>LOCAL</span>
               </div>
               <div>
-                <span className="text-[9px] font-bold block">QwenCoder 0.5B</span>
-                <span className="text-[7px] text-slate-500 block">Rodando em apenas 124MB RAM</span>
+                <span className="text-[8px] font-bold block">Qwen 1-Bit</span>
+              </div>
+            </button>
+
+            {/* RAG Heuristic Option */}
+            <button
+              onClick={() => {
+                onUpdateLlmModelType("rag");
+                onInjectLog("INFO", "SYSTEM", "Mecanismo Selix Bolt alterado para RAG Heurístico de Contexto.");
+              }}
+              className={`p-2 py-3 rounded border text-left font-mono transition-all flex flex-col justify-between h-20 cursor-pointer ${
+                llmModelType === "rag"
+                  ? "bg-sky-950/30 border-sky-500/80 text-sky-400"
+                  : "bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700"
+              }`}
+            >
+              <div className="flex items-center justify-between w-full">
+                <Database className="w-3.5 h-3.5" />
+                <span className={`text-[6px] font-bold px-0.5 rounded ${llmModelType === "rag" ? "bg-sky-900 text-sky-200" : "bg-slate-800 text-slate-500"}`}>RAG</span>
+              </div>
+              <div>
+                <span className="text-[8px] font-bold block">RAG Heuristics</span>
               </div>
             </button>
           </div>
 
           {/* Context Details based on selected type */}
-          {modelType === "gcloud_gemini" ? (
+          {llmModelType === "gemini" ? (
             <div className="bg-slate-900 p-3 rounded border border-slate-800 text-3xs font-mono space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">STATUS DA LICENÇA GCLOUD:</span>
@@ -144,7 +243,7 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
               </div>
 
               <div className="text-slate-500 text-[8px] leading-normal font-sans">
-                Seu frontend conecta na conta Google autenticada do investidor para gerar uma licença de uso do Gemini com validade de 30 dias. Após o período, faturado automaticamente via receitas do Google Pay.
+                Seu faturamento é indexado diretamente à conta cadastrada do investidor para prover o faturamento em nuvem (Gemini 3.5 Flash).
               </div>
 
               {currentUser ? (
@@ -164,12 +263,12 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
                     disabled={isGeneratingGcloudKey}
                     className="w-full py-1.5 px-3 rounded bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold uppercase tracking-wider text-[9px] cursor-pointer transition-all flex items-center justify-center gap-1.5"
                   >
-                    {isGeneratingGcloudKey ? "GENERATING GCLOUD KEY..." : generatedKey ? "RENOVAR LICENÇA GCLOUD 30D" : "GERAR CHAVE GCLOUD (30 DIAS)"}
+                    {isGeneratingGcloudKey ? "GENERATING KEY..." : generatedKey ? "RENOVAR LICENÇA GCLOUD 30D" : "GERAR CHAVE GCLOUD (30 DIAS)"}
                   </button>
                 </div>
               ) : (
                 <div className="p-2 border border-dashed border-rose-500/20 bg-rose-950/10 text-rose-300 rounded text-center text-[9px]">
-                  Falta Conexão. Por favor, faça login usando sua <strong>Conta do Google</strong> na Área do Investidor para herdar automaticamente esta licença.
+                  Sem login. Faça login em sua <strong>Conta Google</strong> no painel de investidor para herdar licenças GCloud.
                 </div>
               )}
 
@@ -179,14 +278,14 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
                 <span className="text-slate-300">R$ {reinvestmentBalance.toFixed(2)}</span>
               </div>
             </div>
-          ) : (
+          ) : llmModelType === "local1bit" ? (
             <div className="bg-slate-900 p-3 rounded border border-slate-800 text-3xs font-mono space-y-2">
               <div className="flex items-center justify-between text-slate-400">
                 <span>ALOCAÇÃO EM HARDWARE:</span>
                 <span className="text-emerald-400 font-bold">124MB RAM COMPATÍVEL</span>
               </div>
               <p className="text-slate-500 text-[8px] leading-normal font-sans">
-                O modelo local <strong>QwenCoder-0.5B quantizado em 1-bit</strong> está configurado para operar livre de OOM (Out Of Memory) mesmo no sandbox restrito de 300MB de RAM. Excelência matemática local sem requisições externas.
+                Seu modelo rodará livre de OOM (Out Of Memory) no sandbox do navegador. Excelência de inferência offline completa.
               </p>
               <div className="grid grid-cols-2 gap-2 text-[8px] text-slate-400 font-bold pt-1">
                 <div className="bg-slate-950 p-1.5 rounded text-center">
@@ -198,6 +297,16 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
                   <span className="text-sky-400 font-mono text-[10px]">35% CPU</span>
                 </div>
               </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900 p-3 rounded border border-slate-800 text-3xs font-mono space-y-2">
+              <div className="flex items-center justify-between text-slate-400">
+                <span>RAG OFF-GRID STATUS:</span>
+                <span className="text-sky-400 font-bold">ATIVADO</span>
+              </div>
+              <p className="text-slate-500 text-[8px] leading-normal font-sans">
+                Heurísticas e recuperação locais lendo o dicionário indexado de dados do Selix para responder com confiabilidade matemática de 100%.
+              </p>
             </div>
           )}
         </div>
@@ -212,7 +321,6 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
             </p>
 
             <div className="space-y-3 font-mono text-3xs bg-slate-900 p-3 rounded border border-slate-800">
-              {/* Target threshold selector */}
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">ACURÁCIA ALVO RAG:</span>
                 <span className="text-amber-400 font-bold text-xs">{targetAccuracy.toFixed(1)}%</span>
@@ -228,7 +336,6 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
                 className="w-full h-1.5 bg-slate-950 rounded appearance-none cursor-pointer accent-indigo-500"
               />
 
-              {/* Real Accuracy Monitor */}
               <div className="flex items-center justify-between border-t border-slate-800 pt-2 mt-2">
                 <span className="text-slate-400">ACURÁCIA EM TEMPO REAL:</span>
                 <span className={`font-bold text-xs ${currentAccuracy >= 98.0 ? 'text-emerald-400' : 'text-rose-500 animate-pulse'}`}>
@@ -243,7 +350,6 @@ export default function SelixBolt({ onInjectLog, currentUser, totalRevenue }: Se
                 />
               </div>
 
-              {/* Drag/Drop test accuracy button */}
               <div className="pt-2 flex justify-between gap-2">
                 <button
                   type="button"

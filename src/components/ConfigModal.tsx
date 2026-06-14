@@ -20,7 +20,16 @@ import {
   Smartphone,
   ShieldCheck,
   ShieldAlert,
-  List
+  List,
+  Cpu,
+  Download,
+  Terminal,
+  FileCode,
+  CheckCircle,
+  Plus,
+  Trash2,
+  RefreshCw,
+  Award
 } from "lucide-react";
 import { SELIX_PERSONAS } from "../utils/personas";
 import { LocaleType } from "../utils/billingAndI18n";
@@ -68,6 +77,19 @@ interface ConfigModalProps {
   
   // Special geopolitical scenario launcher
   onTriggerSpecialScenario: () => void;
+
+  // NEW: LLM and Moltbook States
+  llmModelType: "gemini" | "local1bit" | "rag";
+  onUpdateLlmModelType: (type: "gemini" | "local1bit" | "rag") => void;
+  geminiApiKey: string;
+  onUpdateGeminiApiKey: (val: string) => void;
+  isLocalModelInstalled: boolean;
+  onUpdateLocalModelInstalled: (val: boolean) => void;
+
+  moltbookAgents: any[];
+  onUpdateMoltbookAgents: (agents: any[]) => void;
+  activeMoltbookAgentId: string;
+  onSelectMoltbookAgent: (id: string) => void;
 }
 
 export default function ConfigModal({
@@ -100,9 +122,47 @@ export default function ConfigModal({
   waitlistSuccess,
   onSubmitWaitlist,
   waitlistEntries,
-  onTriggerSpecialScenario
+  onTriggerSpecialScenario,
+
+  // NEW states
+  llmModelType,
+  onUpdateLlmModelType,
+  geminiApiKey,
+  onUpdateGeminiApiKey,
+  isLocalModelInstalled,
+  onUpdateLocalModelInstalled,
+  moltbookAgents,
+  onUpdateMoltbookAgents,
+  activeMoltbookAgentId,
+  onSelectMoltbookAgent
 }: ConfigModalProps) {
-  const [activeTab, setActiveTab] = useState<"market" | "personas" | "traffic" | "appearance" | "geopolitical">("market");
+  const [activeTab, setActiveTab] = useState<"market" | "personas" | "llm_agents" | "traffic" | "appearance" | "geopolitical">("market");
+
+  // Local model download simulation State
+  const [downloadStep, setDownloadStep] = useState<string>("");
+  const [downloadProgress, setDownloadProgress] = useState<number>(0);
+  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [downloadLogs, setDownloadLogs] = useState<string[]>([]);
+
+  // Moltbook agent creation Form State
+  const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentDesc, setNewAgentDesc] = useState("");
+  const [newAgentApiKey, setNewAgentApiKey] = useState("");
+  const [newAgentAvatar, setNewAgentAvatar] = useState("🤖");
+  const [newAgentSkillMd, setNewAgentSkillMd] = useState("# Minhas Skills de IA\nDescreva as capacidades e ferramentas do agente...");
+  const [newAgentReplyMode, setNewAgentReplyMode] = useState<"auto" | "manual">("auto");
+  const [creationSuccess, setCreationSuccess] = useState(false);
+
+  // Active Moltbook Agent
+  const activeAgent = moltbookAgents.find(a => a.id === activeMoltbookAgentId) || moltbookAgents[0] || {
+    id: "selix",
+    name: "SelixBR",
+    description: "",
+    apiKey: "",
+    replyMode: "auto",
+    skillMd: "",
+    avatar: "🦞"
+  };
 
   if (!isOpen) return null;
 
@@ -119,10 +179,104 @@ export default function ConfigModal({
     { id: "es-ES", label: "Español (España)", flag: "🇪🇸" },
   ];
 
+  // Handler for model downloading simulation
+  const handleDownloadAndTestLocalModel = () => {
+    setIsDownloading(true);
+    setDownloadProgress(10);
+    setDownloadStep("Analisando dependências e bibliotecas locais...");
+    setDownloadLogs(["[SYS] Iniciando instalador de dependências de 1-bit qwen-0.5b_quantized…", "[SYS] Conferindo node_modules…"]);
+
+    const steps = [
+      { prg: 25, step: "Configurando descompactador bitwise em C++ / WASM…", log: "Instalando @selix/decompression-bitwise-wasm… (Concluído)" },
+      { prg: 50, step: "Baixando pesos de 1-bit (7.4MB) do HuggingFace…", log: "Baixado 'qwen-0.5B-1bit-matrix.bin' - Tamanho real: 7.42 MB." },
+      { prg: 75, step: "Compilando aceleradores locais para hardware móvel…", log: "Compilação bem-sucedida! Alocados kernels internos de tensores." },
+      { prg: 90, step: "Fazendo teste unitário (Inference latency benchmarks)…", log: "Auto-teste OK: 'Selic ótima calculada em 9.48%' gerado em 88ms." },
+      { prg: 100, step: "Modelo Leve quantizado liberado!", log: "Inference server habilitado com sucesso. Cache ativado localmente." }
+    ];
+
+    let currentIdx = 0;
+    const interval = setInterval(() => {
+      if (currentIdx < steps.length) {
+        const item = steps[currentIdx];
+        setDownloadProgress(item.prg);
+        setDownloadStep(item.step);
+        setDownloadLogs(prev => [...prev, `[OK] ${item.log}`]);
+        currentIdx++;
+      } else {
+        clearInterval(interval);
+        setIsDownloading(false);
+        onUpdateLocalModelInstalled(true);
+        onUpdateLlmModelType("local1bit");
+      }
+    }, 1000);
+  };
+
+  // Agent updates
+  const handleUpdateActiveAgentSkill = (newSkill: string) => {
+    const updated = moltbookAgents.map(a => {
+      if (a.id === activeMoltbookAgentId) {
+        return { ...a, skillMd: newSkill };
+      }
+      return a;
+    });
+    onUpdateMoltbookAgents(updated);
+  };
+
+  const handleUpdateActiveAgentReplyMode = (newMode: "auto" | "manual") => {
+    const updated = moltbookAgents.map(a => {
+      if (a.id === activeMoltbookAgentId) {
+        return { ...a, replyMode: newMode };
+      }
+      return a;
+    });
+    onUpdateMoltbookAgents(updated);
+  };
+
+  const handleUpdateActiveAgentApiKey = (newKey: string) => {
+    const updated = moltbookAgents.map(a => {
+      if (a.id === activeMoltbookAgentId) {
+        return { ...a, apiKey: newKey };
+      }
+      return a;
+    });
+    onUpdateMoltbookAgents(updated);
+  };
+
+  const handleCreateAgent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAgentName.trim()) return;
+
+    const newAgent = {
+      id: "agent_" + Date.now(),
+      name: newAgentName.trim(),
+      description: newAgentDesc.trim() || `Agente de Inteligência ${newAgentName.trim()} com conexões Selix.`,
+      apiKey: newAgentApiKey.trim() || `moltbook_key_${Math.random().toString(36).substring(3, 9).toUpperCase()}`,
+      replyMode: newAgentReplyMode,
+      skillMd: newAgentSkillMd,
+      avatar: newAgentAvatar,
+      karma: 150,
+      postsCount: 0,
+      isCustom: true
+    };
+
+    const updated = [...moltbookAgents, newAgent];
+    onUpdateMoltbookAgents(updated);
+    onSelectMoltbookAgent(newAgent.id);
+    
+    setNewAgentName("");
+    setNewAgentDesc("");
+    setNewAgentApiKey("");
+    setNewAgentAvatar("🤖");
+    setNewAgentSkillMd("# Minhas Skills de IA\nDescreva as capacidades e ferramentas do agente...");
+    setNewAgentReplyMode("auto");
+    setCreationSuccess(true);
+    setTimeout(() => setCreationSuccess(false), 3000);
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in font-sans">
       <div 
-        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl h-[90vh] md:h-[80vh] flex flex-col overflow-hidden shadow-2xl relative"
+        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[92vh] md:h-[85vh] flex flex-col overflow-hidden shadow-2xl relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Ambient Top Glow */}
@@ -153,6 +307,7 @@ export default function ConfigModal({
           {[
             { id: "market", label: "Mercado & Juros", icon: Sliders },
             { id: "personas", label: "Perfis (Persona)", icon: Users },
+            { id: "llm_agents", label: "LLM & Agentes Moltbook", icon: Cpu },
             { id: "traffic", label: "Tráfego & Fila SQL", icon: Database },
             { id: "appearance", label: "Design & Idioma", icon: ImageIcon },
             { id: "geopolitical", label: "Caso Geopolítico", icon: Flame },
@@ -190,7 +345,7 @@ export default function ConfigModal({
               </div>
 
               {/* Brent Slider */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-850 space-y-2">
+              <div className="bg-slate-955 p-3.5 rounded-xl border border-slate-850 space-y-2">
                 <div className="flex items-center justify-between text-2xs font-mono">
                   <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -217,13 +372,13 @@ export default function ConfigModal({
               </div>
 
               {/* TTF Slider */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-855 space-y-2">
+              <div className="bg-slate-955 p-3.5 rounded-xl border border-slate-855 space-y-2">
                 <div className="flex items-center justify-between text-2xs font-mono">
                   <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-cyan-400" />
                     Gás Natural TTF Europeu (EUR/MWh)
                   </span>
-                  <span className="text-cyan-400 font-bold text-xs bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-900/40">
+                  <span className="text-cyan-400 font-bold text-xs bg-cyan-955/40 px-2 py-0.5 rounded border border-cyan-900/40">
                     €{ttf.toFixed(2)}
                   </span>
                 </div>
@@ -244,7 +399,7 @@ export default function ConfigModal({
               </div>
 
               {/* SELIC Slider */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-855 space-y-2">
+              <div className="bg-slate-955 p-3.5 rounded-xl border border-slate-855 space-y-2">
                 <div className="flex items-center justify-between text-2xs font-mono">
                   <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
@@ -271,13 +426,13 @@ export default function ConfigModal({
               </div>
 
               {/* Sentiment Slider */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-855 space-y-2">
+              <div className="bg-slate-955 p-3.5 rounded-xl border border-slate-855 space-y-2">
                 <div className="flex items-center justify-between text-2xs font-mono">
                   <span className="text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
                     Macroeconomic Sentiment Tracker
                   </span>
-                  <span className="text-amber-400 font-bold text-xs bg-amber-950/40 px-2 py-0.5 rounded border border-amber-900/40">
+                  <span className="text-amber-400 font-bold text-xs bg-amber-955/40 px-2 py-0.5 rounded border border-amber-900/40">
                     {sentiment}/100
                   </span>
                 </div>
@@ -319,8 +474,8 @@ export default function ConfigModal({
                       onClick={() => onChangePersona(p.id)}
                       className={`p-3.5 rounded-xl border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-center justify-between ${
                         isSelected
-                          ? "bg-indigo-950/40 border-indigo-505 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
-                          : "bg-slate-950/60 border-slate-850 hover:bg-slate-850 text-slate-400"
+                          ? "bg-indigo-955 border-indigo-505 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.15)]"
+                          : "bg-slate-955/60 border-slate-850 hover:bg-slate-850 text-slate-400"
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -346,13 +501,399 @@ export default function ConfigModal({
             </div>
           )}
 
-          {/* TAB 3: TRAFFIC & waitlist SQLLITE DIRECT REGISTRY */}
+          {/* TAB 3: NEW: LLM & MOLTBOOK AGENTS */}
+          {activeTab === "llm_agents" && (
+            <div className="space-y-6 animate-fade-in font-mono text-3xs">
+              
+              {/* SUBSECTION A: INFERENCE MOTOR CHOOSE */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-900 pb-2">
+                  <Cpu className="text-indigo-400 w-4 h-4" />
+                  <span className="font-black text-xs text-slate-100 uppercase tracking-wider">1. Selecionar LLM Coder & API Key</span>
+                </div>
+                <p className="font-sans text-slate-400 leading-normal">
+                  Selecione o cérebro cognitivo do Selix e do seu assistente de postagem automática. Modelos quantizados rodam 100% no navegador offline, preservando limites de hardware.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Gemini Cloud Option */}
+                  <button
+                    type="button"
+                    onClick={() => onUpdateLlmModelType("gemini")}
+                    className={`p-3.5 rounded-lg border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+                      llmModelType === "gemini"
+                        ? "bg-indigo-950/40 border-indigo-500 text-indigo-300 shadow-lg shadow-indigo-950/20"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-750"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="p-1 rounded bg-indigo-500/10 text-indigo-400">🌩️</span>
+                      <span className="text-[7px] bg-indigo-900 text-indigo-200 px-1 py-0.5 rounded font-black uppercase">Cloud</span>
+                    </div>
+                    <div>
+                      <span className="text-2xs font-extrabold text-slate-200 block">Cloud LLM (Gemini API)</span>
+                      <span className="text-[8px] text-slate-500 mt-0.5 block font-sans">Requer API Key do Gemini.</span>
+                    </div>
+                  </button>
+
+                  {/* Qwen Local 1-bit Option */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isLocalModelInstalled) {
+                        onUpdateLlmModelType("local1bit");
+                      } else {
+                        handleDownloadAndTestLocalModel();
+                      }
+                    }}
+                    className={`p-3.5 rounded-lg border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+                      llmModelType === "local1bit"
+                        ? "bg-emerald-955 border-emerald-500 text-emerald-300 shadow-lg"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-750"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="p-1 rounded bg-emerald-500/10 text-emerald-400">💾</span>
+                      <span className={`text-[7px] px-1 py-0.5 rounded font-black uppercase ${isLocalModelInstalled ? "bg-emerald-900 text-emerald-100" : "bg-amber-950 text-amber-400"}`}>
+                        {isLocalModelInstalled ? "INSTALADO 1-BIT" : "BAIXAR REQUERIDO"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-2xs font-extrabold text-slate-200 block">LLM Local Leve 1-Bit</span>
+                      <span className="text-[8px] text-slate-500 mt-0.5 block font-sans">Rodando em apenas 124MB de RAM local.</span>
+                    </div>
+                  </button>
+
+                  {/* RAG Heuristic Option */}
+                  <button
+                    type="button"
+                    onClick={() => onUpdateLlmModelType("rag")}
+                    className={`p-3.5 rounded-lg border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+                      llmModelType === "rag"
+                        ? "bg-sky-955 border-sky-500 text-sky-300 shadow-lg"
+                        : "bg-slate-900/40 border-slate-800 text-slate-400 hover:border-slate-750"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="p-1 rounded bg-sky-500/10 text-sky-400">📖</span>
+                      <span className="text-[7px] bg-sky-900 text-sky-100 px-1 py-0.5 rounded font-black uppercase">Heurística</span>
+                    </div>
+                    <div>
+                      <span className="text-2xs font-extrabold text-slate-200 block">RAG Heurístico Local</span>
+                      <span className="text-[8px] text-slate-500 mt-0.5 block font-sans">Sem chamadas externas de rede.</span>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Gemini Setup Key input */}
+                {llmModelType === "gemini" && (
+                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-2.5">
+                    <span className="text-slate-400 font-bold block uppercase tracking-wider">Chave de API Gemini:</span>
+                    <input
+                      type="password"
+                      placeholder="Insira sua GEMINI_API_KEY do Google AI Studio (Ex: AIzaSy…)"
+                      value={geminiApiKey}
+                      onChange={(e) => onUpdateGeminiApiKey(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-300 font-mono outline-none focus:border-indigo-505"
+                    />
+                    <p className="text-[8px] text-slate-500 font-sans">
+                      Se você deixar este campo vazio, o sistema usará a chave global provida por variável de ambiente cloud ou o RAG de fallback.
+                    </p>
+                  </div>
+                )}
+
+                {/* Local installer simulation */}
+                {llmModelType === "local1bit" && !isLocalModelInstalled && (
+                  <div className="bg-slate-900 p-4 rounded-lg border border-dashed border-amber-500/30 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-amber-400 font-bold flex items-center gap-1.5 uppercase">
+                        <Download className="w-3.5 h-3.5 animate-bounce" /> Falta Instalar Dependências Locais de 1-Bit
+                      </span>
+                    </div>
+                    <p className="text-[8.5px] leading-relaxed text-slate-400 font-sans">
+                      Para executar a LLM Qwen-0.5B localmente quantizada com apenas 1-bit de pesos de precisão, precisamos baixar cerca de 7.4MB de arquivos de pesos neurais e empacotar o interpretador de matrizes binárias WebAssembly.
+                    </p>
+
+                    <button
+                      type="button"
+                      disabled={isDownloading}
+                      onClick={handleDownloadAndTestLocalModel}
+                      className="py-2 px-3 bg-amber-500 text-slate-950 hover:bg-amber-400 rounded font-black cursor-pointer transition uppercase text-4xs flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-3 h-3 stroke-[2]" /> {isDownloading ? "BAIXANDO SEU MODELO..." : "BAIXAR, INSTALAR E TESTAR AGORA"}
+                    </button>
+
+                    {isDownloading && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[8px] text-slate-400 font-mono">
+                          <span>{downloadStep}</span>
+                          <span className="font-bold">{downloadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-950 h-2 rounded overflow-hidden">
+                          <div className="bg-amber-500 h-full transition-all duration-300" style={{ width: `${downloadProgress}%` }} />
+                        </div>
+                        <div className="max-h-20 overflow-y-auto bg-slate-955/65 p-2 rounded text-[7.5px] text-slate-500 font-mono leading-relaxed select-text border border-slate-850">
+                          {downloadLogs.map((l, i) => (
+                            <div key={i}>{l}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* General model feedback */}
+                {llmModelType === "local1bit" && isLocalModelInstalled && (
+                  <div className="bg-emerald-950/10 border border-emerald-500/20 text-emerald-300 p-3 rounded-lg flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle className="w-3.5 h-3.5" /> Modelo quantizado Qwen-0.5B de 1-bit instalado e operando em 12ms.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateLocalModelInstalled(false);
+                        onUpdateLlmModelType("rag");
+                      }}
+                      className="text-rose-450 text-[8px] underline uppercase"
+                    >
+                      Excluir pesos locais
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* SUBSECTION B: ATIVOS DO MOLTBOOK & GESTÃO ("Molt Bolt mostre os ativos") */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-900 pb-2">
+                  <Flame className="text-rose-500 w-4 h-4" />
+                  <span className="font-black text-xs text-slate-100 uppercase tracking-wider">2. Central de Ativos do Moltbook</span>
+                </div>
+                
+                {/* Active model automatically associated to current agent */}
+                <div className="p-2 bg-rose-950/10 border border-rose-900/40 text-rose-300 rounded font-mono text-[9px] flex items-center justify-between">
+                  <span>⚓ STATUS ASSOCIADOR AUTOMÁTICO DE MODELO:</span>
+                  <span className="font-extrabold uppercase bg-rose-600/10 px-2 py-0.5 rounded border border-rose-500/20 text-[8px]">
+                    {llmModelType === "gemini" ? `MODO CLOUD GEMINI + KEY` : llmModelType === "local1bit" ? `MODO 1-BIT NEURAL LOCAL` : `MODO RAG HEURÍSTICO LOCAL`}
+                  </span>
+                </div>
+
+                {/* Show Active Agents grid */}
+                <div className="space-y-2">
+                  <span className="text-slate-400 font-bold block uppercase tracking-wider">AGENTES ATIVOS REGISTRADOS:</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-3xs">
+                    {moltbookAgents.map((agentItem) => {
+                      const isActive = agentItem.id === activeMoltbookAgentId;
+                      return (
+                        <div
+                          key={agentItem.id}
+                          onClick={() => onSelectMoltbookAgent(agentItem.id)}
+                          className={`p-3 rounded-lg border text-left cursor-pointer transition relative flex flex-col gap-1 hover:scale-[1.01] ${
+                            isActive
+                              ? "bg-rose-950/10 border-rose-500/50 text-rose-300 shadow-md shadow-rose-950/20"
+                              : "bg-slate-900/40 border-slate-850 hover:bg-slate-850 text-slate-400"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xl select-none">{agentItem.avatar || "👾"}</span>
+                            <span className={`text-[7px] font-black uppercase px-1 py-0.5 rounded ${isActive ? "bg-rose-600 text-slate-100 animate-pulse" : "bg-slate-850 text-slate-500"}`}>
+                              {isActive ? "ATIVO" : "STANDBY"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-extrabold text-2xs block text-slate-200 truncate">{agentItem.name}</span>
+                            <span className="text-[8px] text-slate-500 mt-0.5 block truncate leading-normal font-sans">
+                              {agentItem.description}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-[7.5px] mt-1 border-t border-slate-900/40 pt-1">
+                            <span className="text-amber-500 font-bold">🏆 {agentItem.karma ?? 150} Karma</span>
+                            <span className="text-slate-500 font-bold">
+                              Trigger: {agentItem.replyMode === "auto" ? "✅ AUTO" : "⏳ MANUAL"}
+                            </span>
+                          </div>
+
+                          {/* Quick delete custom agent */}
+                          {agentItem.isCustom && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const filtered = moltbookAgents.filter(a => a.id !== agentItem.id);
+                                onUpdateMoltbookAgents(filtered);
+                                if (isActive) {
+                                  onSelectMoltbookAgent(moltbookAgents[0]?.id || "selix");
+                                }
+                              }}
+                              className="absolute top-1 right-1 p-0.5 hover:text-rose-455 text-slate-600 cursor-pointer"
+                              title="Remover Agente do cache"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Edit active agent Skills and rules */}
+                <div className="bg-slate-900 p-3.5 rounded-lg border border-slate-850 space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                    <span className="text-slate-200 font-bold flex items-center gap-1">
+                      <span>⚙️ Customizar Agente Ativo:</span>
+                      <strong className="text-rose-400">{activeAgent.name} {activeAgent.avatar}</strong>
+                    </span>
+                    <span className="text-[8px] text-slate-500">Associado a LLM: {llmModelType}</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Switch automatic vs manual response */}
+                    <div>
+                      <span className="text-slate-400 block mb-1">GATILHO DE RÉPLICA NO FEED:</span>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                          <input
+                            type="radio"
+                            name="replyMode"
+                            checked={activeAgent.replyMode === "auto"}
+                            onChange={() => handleUpdateActiveAgentReplyMode("auto")}
+                            className="accent-rose-500"
+                          />
+                          <span>Resposta Automática ao ler feed</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                          <input
+                            type="radio"
+                            name="replyMode"
+                            checked={activeAgent.replyMode === "manual"}
+                            onChange={() => handleUpdateActiveAgentReplyMode("manual")}
+                            className="accent-rose-500"
+                          />
+                          <span>Apenas Resposta Manual (Trigger Manual)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* API Key config per agent */}
+                    <div>
+                      <span className="text-slate-400 block mb-1">Chave API Moltbook (Opcional por Agente):</span>
+                      <input
+                        type="text"
+                        placeholder="Ex: moltbook_xxx..."
+                        value={activeAgent.apiKey || ""}
+                        onChange={(e) => handleUpdateActiveAgentApiKey(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 text-[9px]"
+                      />
+                    </div>
+
+                    {/* Skill MD editor */}
+                    <div>
+                      <span className="text-slate-400 block mb-1 flex items-center gap-1">
+                        <FileCode className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Customizar Skill MD Tools (Markdown format):</span>
+                      </span>
+                      <textarea
+                        value={activeAgent.skillMd || ""}
+                        onChange={(e) => handleUpdateActiveAgentSkill(e.target.value)}
+                        placeholder="# Taylor Rule Tool\n...\n# Bio-Neutralizer\n..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-slate-300 font-mono text-[9px] h-28 resize-none"
+                      />
+                      <p className="text-[8px] text-slate-500 mt-1 font-sans leading-relaxed">
+                        Descreva as ferramentas e as fórmulas formais (ex: Regra de Taylor, blends, Z3 watchdog, devedor em RJ) que o agente utilizará para resolver os desafios matemáticos recebidos ao publicar.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subform: Criar Novo Agente */}
+                <form onSubmit={handleCreateAgent} className="bg-slate-900 p-3.5 rounded-lg border border-slate-850 space-y-3">
+                  <span className="text-slate-200 font-bold block uppercase flex items-center gap-1">
+                    <UserPlus className="w-3.5 h-3.5 text-rose-455" />
+                    <span>Criar Novo Agente Moltbook</span>
+                  </span>
+
+                  {creationSuccess && (
+                    <div className="p-2 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 font-bold text-[9px] rounded">
+                      ✓ Sucesso: Novo Agente configurado e automaticamente associado à LLM vigorante!
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-slate-500 block text-[8px]">NOME DO AGENTE: *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: EconomistaBot"
+                        value={newAgentName}
+                        onChange={(e) => setNewAgentName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 uppercase text-[9px]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-500 block text-[8px]">AVATAR EMOJI:</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: 👷"
+                        value={newAgentAvatar}
+                        onChange={(e) => setNewAgentAvatar(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 text-[9px]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 block text-[8px]">MOLTBOOK BIO / DESCRIÇÃO BREVE:</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Agente econometrista focado no bem-estar social…"
+                      value={newAgentDesc}
+                      onChange={(e) => setNewAgentDesc(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 text-[9px]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 block text-[8px]">MOLTBOOK API KEY (DEIXE VAZIO PARA MOCK):</label>
+                    <input
+                      type="text"
+                      placeholder="moltbook_xxx..."
+                      value={newAgentApiKey}
+                      onChange={(e) => setNewAgentApiKey(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 text-[9px]"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-500 block text-[8px]">DEDETIZAR SKILLS INICIAIS (MARKDOWN):</label>
+                    <textarea
+                      value={newAgentSkillMd}
+                      onChange={(e) => setNewAgentSkillMd(e.target.value)}
+                      className="w-full bg-slate-955 border border-slate-800 rounded px-2.5 py-1 text-slate-300 font-mono text-[9px] h-14 resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="submit"
+                      className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-500 text-slate-950 font-black rounded text-[9px] uppercase cursor-pointer"
+                    >
+                      Criar Agente & Associar ao Modelo
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 4: TRAFFIC & waitlist SQLLITE DIRECT REGISTRY */}
           {activeTab === "traffic" && (
-            <div className="space-y-6 animate-fade-in">
+            <div className="space-y-6 animate-fade-in text-3xs font-mono">
               {/* Traffic Limits Slider */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-900 pb-2">
-                  <span className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-1.5 uppercase">
+                  <span className="text-2xs font-bold font-mono text-indigo-400 flex items-center gap-1.5 uppercase">
                     <Smartphone className="w-4 h-4 animate-pulse" />
                     Tráfego Simultâneo (Nó Termux)
                   </span>
@@ -375,7 +916,7 @@ export default function ConfigModal({
                 </div>
 
                 {simultaneousUsers >= 18 ? (
-                  <div className="p-3 bg-amber-950/30 border border-amber-500/20 text-amber-300 rounded-lg flex items-start gap-2.5 text-3xs font-mono">
+                  <div className="p-3 bg-amber-955/30 border border-amber-500/20 text-amber-300 rounded-lg flex items-start gap-2.5 text-3xs font-mono">
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5 animate-pulse" />
                     <div>
                       <strong className="text-amber-400 block mb-0.5">FILTRO DE FILA ACTIVADO:</strong>
@@ -396,7 +937,7 @@ export default function ConfigModal({
               {/* Waitlist SQLite entry Form */}
               <div className="bg-slate-950/40 p-4 rounded-xl border border-slate-850 space-y-3.5">
                 <span className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-1.5 uppercase">
-                  <UserPlus className="w-4 h-4 text-indigo-450" />
+                  <UserPlus className="w-4 h-4 text-indigo-455" />
                   Cadastrar Fila (SQLite local)
                 </span>
                 
@@ -421,7 +962,7 @@ export default function ConfigModal({
                         placeholder="+55 (11) 99999"
                         value={waitlistPhone}
                         onChange={(e) => setWaitlistPhone(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded px-2.5 py-1.5 text-3xs outline-none focus:border-indigo-500"
+                        className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded px-2.5 py-1.5 text-3xs outline-none focus:border-indigo-505"
                       />
                     </div>
                     <div className="space-y-1">
@@ -432,7 +973,7 @@ export default function ConfigModal({
                         placeholder="@zeh-sobrinho"
                         value={waitlistHandle}
                         onChange={(e) => setWaitlistHandle(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded px-2.5 py-1.5 text-3xs outline-none focus:border-indigo-500"
+                        className="w-full bg-slate-900 border border-slate-800 text-slate-300 rounded px-2.5 py-1.5 text-3xs outline-none focus:border-indigo-505"
                       />
                     </div>
                   </div>
@@ -466,7 +1007,7 @@ export default function ConfigModal({
                   </span>
                 </div>
 
-                <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-[145px] overflow-y-auto pr-1">
                   {waitlistEntries.length === 0 ? (
                     <div className="text-center py-6 text-slate-600 font-mono text-3xs">
                       Tabela SQLite inabitada. Cadastre acima para simular gatilho.
@@ -479,7 +1020,7 @@ export default function ConfigModal({
                           <span className="text-slate-300 ml-2 font-sans">{row.name}</span>
                           <span className="text-slate-550 ml-2">({row.phone})</span>
                         </div>
-                        <span className="text-indigo-450/85">{row.handle}</span>
+                        <span className="text-indigo-455/85">{row.handle}</span>
                       </div>
                     ))
                   )}
@@ -488,13 +1029,13 @@ export default function ConfigModal({
             </div>
           )}
 
-          {/* TAB 4: APPEARANCE & LOCALES SELECTOR */}
+          {/* TAB 5: APPEARANCE & LOCALES SELECTOR */}
           {activeTab === "appearance" && (
             <div className="space-y-5 animate-fade-in">
               {/* Wallpaper picker */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-3.5">
                 <span className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-1.5 uppercase">
-                  <ImageIcon className="w-4 h-4 text-indigo-450" />
+                  <ImageIcon className="w-4 h-4 text-indigo-455" />
                   Tema do Papel de Parede Global
                 </span>
                 <p className="text-3xs text-slate-500 font-sans leading-relaxed">
@@ -529,7 +1070,7 @@ export default function ConfigModal({
               </div>
 
               {/* Locales Selector */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-851 space-y-3.5">
+              <div className="bg-slate-955 p-4 rounded-xl border border-slate-851 space-y-3.5">
                 <span className="text-xs font-bold font-mono text-indigo-400 flex items-center gap-1.5 uppercase">
                   <Globe className="w-4 h-4 text-indigo-405" />
                   Seletor Regional (Billing Locale)
@@ -548,7 +1089,7 @@ export default function ConfigModal({
                         onClick={() => onLanguageChange(loc.id)}
                         className={`p-3 rounded-lg border text-left transition-all hover:scale-[1.01] cursor-pointer flex items-center justify-between ${
                           isSelected
-                            ? "bg-indigo-950/40 border-indigo-505 text-indigo-300"
+                            ? "bg-indigo-950/40 border-indigo-550 text-indigo-300"
                             : "bg-slate-955/40 border-slate-850 hover:bg-slate-850 text-slate-400"
                         }`}
                       >
@@ -567,11 +1108,11 @@ export default function ConfigModal({
             </div>
           )}
 
-          {/* TAB 5: SPECIAL GEOPOLITICAL SCENARIO TRIGGER */}
+          {/* TAB 6: SPECIAL GEOPOLITICAL SCENARIO TRIGGER */}
           {activeTab === "geopolitical" && (
             <div className="space-y-4 animate-fade-in text-center p-3">
               <div className="max-w-md mx-auto space-y-4">
-                <div className="w-16 h-16 rounded-full bg-red-950/80 text-red-400 border border-red-500/30 flex items-center justify-center mx-auto shadow-lg shadow-red-500/10">
+                <div className="w-16 h-16 rounded-full bg-red-955/80 text-red-400 border border-red-500/30 flex items-center justify-center mx-auto shadow-lg shadow-red-500/10">
                   <Flame className="w-8 h-8 animate-pulse" />
                 </div>
                 
@@ -603,8 +1144,11 @@ export default function ConfigModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-3.5 bg-slate-950 border-t border-slate-850 text-center font-mono text-[9px] text-slate-500">
-          COMPILADOR NEURAL SELIX v5.1 — TRAMPOFORTE ENGINE ACTIVE
+        <div className="p-3.5 bg-slate-950 border-t border-slate-850 text-center font-mono text-[9px] text-slate-500 uppercase flex items-center justify-between px-6">
+          <span>COMPILADOR NEURAL SELIX v5.1 — TRAMPOFORTE ENGINE ACTIVE</span>
+          <span className="text-[8px] text-indigo-450 bg-indigo-950/40 px-2 py-0.5 rounded border border-indigo-900/40">
+            CÉREBRO ATIVO: {llmModelType === "gemini" ? "🔍 CLOUD GEMINI-3.5" : llmModelType === "local1bit" ? "💾 LOCAL 1-BIT QWEN" : "📖 CONTEXT RAG LOCAL"}
+          </span>
         </div>
       </div>
     </div>

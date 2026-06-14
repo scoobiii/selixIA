@@ -33,6 +33,10 @@ interface ConsolaAnalistaProps {
   selic: number;
   activeCompanionTab?: "selix" | "moltbook";
   onChangeCompanionTab?: (tab: "selix" | "moltbook") => void;
+  llmModelType: "gemini" | "local1bit" | "rag";
+  moltbookAgents: any[];
+  activeMoltbookAgentId: string;
+  onSelectMoltbookAgent: (id: string) => void;
 }
 
 export default function ConsolaAnalista({ 
@@ -42,7 +46,11 @@ export default function ConsolaAnalista({
   brent,
   selic,
   activeCompanionTab,
-  onChangeCompanionTab
+  onChangeCompanionTab,
+  llmModelType,
+  moltbookAgents,
+  activeMoltbookAgentId,
+  onSelectMoltbookAgent
 }: ConsolaAnalistaProps) {
   // Use outer state if provided, otherwise fallback to local state
   const [localTab, setLocalTab] = useState<"selix" | "moltbook">("selix");
@@ -263,6 +271,10 @@ export default function ConsolaAnalista({
             onInjectLog={onInjectLog}
             brent={brent}
             selic={selic}
+            llmModelType={llmModelType}
+            moltbookAgents={moltbookAgents}
+            activeMoltbookAgentId={activeMoltbookAgentId}
+            onSelectMoltbookAgent={onSelectMoltbookAgent}
           />
         </div>
       )}

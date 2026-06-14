@@ -1180,7 +1180,7 @@ app.post("/api/threads/publish", async (req, res) => {
 
 // AI Agent Query Endpoint powered by server-side Gemini
 app.post("/api/agent-query", async (req, res) => {
-  const { query, customData } = req.body;
+  const { query, customData, apiKey: bodyApiKey } = req.body;
   if (!query) {
     return res.status(400).json({ error: "Query is required" });
   }
@@ -1201,10 +1201,27 @@ Never hallucinate statistics or data. If you don't know something or if there ar
 Keep your responses relatively brief, clear, and structured. Mention your Lean proofs or watchdog health metrics if relevant.
 Avoid sales pitch or overly flowery language. Maintain the standard economic intelligence profile.`;
 
+  // Determine which GoogleGenAI instance to use
+  let activeAi = ai;
+  if (bodyApiKey && bodyApiKey !== "MY_GEMINI_API_KEY" && bodyApiKey.trim() !== "") {
+    try {
+      activeAi = new GoogleGenAI({
+        apiKey: bodyApiKey,
+        httpOptions: {
+          headers: {
+            "User-Agent": "aistudio-build",
+          },
+        },
+      });
+    } catch (err) {
+      console.error("Failed to initialize dynamic GoogleGenAI:", err);
+    }
+  }
+
   try {
-    if (ai) {
+    if (activeAi) {
       systemStatus = "running";
-      const response = await ai.models.generateContent({
+      const response = await activeAi.models.generateContent({
         model: "gemini-3.5-flash",
         contents: query,
         config: {
