@@ -138,6 +138,16 @@ export default function ConfigModal({
 }: ConfigModalProps) {
   const [activeTab, setActiveTab] = useState<"market" | "personas" | "llm_agents" | "traffic" | "appearance" | "geopolitical">("market");
 
+  // Stripe Secret Key (Optional per service)
+  const [stripeSecretKey, setStripeSecretKey] = useState(() => {
+    return localStorage.getItem("selix_stripe_secret_key") || "";
+  });
+
+  const handleUpdateStripeSecretKey = (val: string) => {
+    setStripeSecretKey(val);
+    localStorage.setItem("selix_stripe_secret_key", val);
+  };
+
   // Local model download simulation State
   const [downloadStep, setDownloadStep] = useState<string>("");
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
@@ -504,6 +514,141 @@ export default function ConfigModal({
           {/* TAB 3: NEW: LLM & MOLTBOOK AGENTS */}
           {activeTab === "llm_agents" && (
             <div className="space-y-6 animate-fade-in font-mono text-3xs">
+              
+              {/* CENTRALIZED API CREDENTIALS MANAGER - "no config gerenciar api key por serviço" */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+                <div className="flex items-center gap-2 border-b border-slate-850 pb-2.5">
+                  <span className="p-1.5 rounded bg-amber-950 text-amber-400 text-xs">🔐</span>
+                  <div>
+                    <span className="font-black text-xs text-slate-105 uppercase tracking-wider block">Gerenciador de API Keys por Serviço</span>
+                    <span className="text-[9px] text-amber-500 font-sans block mt-0.5">ESTRUTURA DE AUTORIZAÇÃO INTEGRADA (REAL-TIME KEYS)</span>
+                  </div>
+                </div>
+                
+                <p className="font-sans text-slate-400 leading-normal text-[10px]">
+                  Para evitar falhas de autenticação como <span className="text-rose-455 font-bold">Unauthorized / Exigência moltbook_</span>, controle as chaves operacionais de cada rede integrada a partir dos painéis dedicados abaixo.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* SERVICE 1: GOOGLE AI STUDIO (GEMINI API KEY) */}
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-850 space-y-2.5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200 text-2xs font-mono uppercase tracking-tight flex items-center gap-1">
+                          🌩️ Gemini AI Studio
+                        </span>
+                        <span className={`text-[7px] font-bold px-1 rounded ${geminiApiKey ? "bg-indigo-950 text-indigo-400 border border-indigo-900" : "bg-slate-950 text-slate-500 border border-slate-800"}`}>
+                          {geminiApiKey ? "CONFIGURADA" : "PROVEDOR CLOUD"}
+                        </span>
+                      </div>
+                      <p className="text-[8.5px] font-sans text-slate-450 mt-1 leading-relaxed">
+                        Chave do Gemini para geração inteligente de insights, monitoramento do mercado B3 e conselhos do copiloto RAG.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <input
+                        type="password"
+                        placeholder="Insira sua GEMINI_API_KEY..."
+                        value={geminiApiKey}
+                        onChange={(e) => onUpdateGeminiApiKey(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 font-mono text-3xs outline-none focus:border-indigo-500"
+                      />
+                      <span className="text-[7.5px] text-slate-550 block select-none">
+                        * Padrão: Usa variável do servidor do AI Studio.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* SERVICE 2: MOLTBOOK SOCIAL NETWORKS (AGENT INDIVIDUAL TOKENS) */}
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-850 space-y-2.5 flex flex-col justify-between md:col-span-2">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200 text-2xs font-mono uppercase tracking-tight flex items-center gap-1">
+                          🦞 Rede Sindical Moltbook
+                        </span>
+                        <span className="text-[7px] bg-rose-950 text-rose-400 border border-rose-900 px-1 rounded font-bold uppercase">
+                          Tokens por Agente
+                        </span>
+                      </div>
+                      <p className="text-[8.5px] font-sans text-slate-450 mt-1 leading-relaxed">
+                        Dica: Chaves oficiais da rede Moltbook obrigatoriamente iniciam com a assinatura <strong className="font-mono text-rose-400">moltbook_</strong>. Registre novos robôs e insira as chaves nos agentes ativos correspondentes.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono">
+                      {moltbookAgents.map((ag) => {
+                        const isSelected = ag.id === activeMoltbookAgentId;
+                        const hasRealKey = ag.apiKey && ag.apiKey.startsWith("moltbook_");
+                        const isDefaultMock = ag.apiKey ? ag.apiKey.includes("_default_key") || ag.apiKey.includes("_custom") || ag.apiKey.includes("_key") : false;
+
+                        return (
+                          <div key={ag.id} className={`p-2 rounded-lg border flex flex-col justify-between gap-1.5 ${isSelected ? "bg-slate-950/90 border-rose-500/20" : "bg-slate-950/40 border-slate-850"}`}>
+                            <div className="flex items-center justify-between text-[7px] border-b border-slate-900 pb-1">
+                              <span className="font-bold text-slate-300 truncate max-w-[70%] flex items-center gap-0.5">
+                                <span>{ag.avatar || "⚙️"}</span>
+                                <span className="truncate">{ag.name}</span>
+                              </span>
+                              <span className={`font-black uppercase text-[6px] ${isSelected ? "text-rose-400" : "text-slate-550"}`}>
+                                {isSelected ? "ACTIVE" : "STANDBY"}
+                              </span>
+                            </div>
+
+                            <input
+                              type="text"
+                              placeholder="moltbook_xxx"
+                              value={ag.apiKey || ""}
+                              onChange={(e) => {
+                                const newKey = e.target.value.trim();
+                                const updated = moltbookAgents.map(x => {
+                                  if (x.id === ag.id) {
+                                    return { ...x, apiKey: newKey };
+                                  }
+                                  return x;
+                                });
+                                onUpdateMoltbookAgents(updated);
+                              }}
+                              className={`w-full bg-slate-900 border ${hasRealKey && !isDefaultMock ? "border-emerald-900 text-emerald-300" : isDefaultMock ? "border-amber-900 text-amber-500" : "border-slate-800 text-slate-400"} rounded px-1.5 py-0.5 text-[8.5px]`}
+                              title={`Chave para o agente ${ag.name}`}
+                            />
+
+                            <div className="text-[6.5px] flex items-center justify-between text-slate-500 pt-0.5">
+                              <span>Token: {hasRealKey && !isDefaultMock ? "Real" : "Mock/Local"}</span>
+                              <span className={hasRealKey && !isDefaultMock ? "text-emerald-400 font-bold" : "text-amber-500 font-bold"}>
+                                {hasRealKey && !isDefaultMock ? "OK" : "MOCK"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* STRIPE AND BILLING API KEYS */}
+                <div className="bg-slate-900/40 p-3 rounded-lg border border-slate-850 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300 text-2xs font-mono uppercase tracking-tight flex items-center gap-2">
+                      💳 Gateway de Pagamentos do Sistema Internacional (Stripe API Key)
+                    </span>
+                    <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded ${stripeSecretKey ? "bg-emerald-950 text-emerald-400 border border-emerald-900/40" : "bg-slate-950 text-slate-500 border border-slate-800"}`}>
+                      {stripeSecretKey ? "PRODUÇÃO" : "SIMULADOR OFF-LINE"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 items-center">
+                    <input
+                      type="password"
+                      placeholder="Insira sua STRIPE_SECRET_KEY para processar checkouts reais (Ex: sk_live_...)"
+                      value={stripeSecretKey}
+                      onChange={(e) => handleUpdateStripeSecretKey(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-slate-300 font-mono text-3xs outline-none focus:border-emerald-505"
+                    />
+                    <div className="text-[7.5px] leading-relaxed text-slate-500 font-sans max-w-sm">
+                      Sincronizado automaticamente para validar o rateio de faturamento multi-inquilino do Selix Premium.
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               {/* SUBSECTION A: INFERENCE MOTOR CHOOSE */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-4">
