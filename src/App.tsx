@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert, ArrowRight, Play, CheckCircle } from "lucide-react";
+import { Terminal as TerminalIcon, ShieldCheck, Database, RefreshCw, Sparkles, Server, BookOpen, AlertCircle, RefreshCcw, Users, Clock, UserPlus, AlertTriangle, List, ShieldAlert, ArrowRight, Play, CheckCircle, Settings } from "lucide-react";
 import IndicadoresMacro from "./components/IndicadoresMacro";
 import EmpresasRJ from "./components/EmpresasRJ";
 import ConsolaLog from "./components/ConsolaLog";
@@ -18,8 +18,13 @@ import { EconomicRecord, LogEntry, LogLevel, LogCategory, BlueskyThread } from "
 import { SELIX_PERSONAS, calculatePersonaSpecificMetrics } from "./utils/personas";
 import RegionalBillingPanel from "./components/RegionalBillingPanel";
 import { LocaleType } from "./utils/billingAndI18n";
+import SelixBolt from "./components/SelixBolt";
+import SelixMoltbook from "./components/SelixMoltbook";
+import { speak } from "./utils/speech";
+import ConfigModal from "./components/ConfigModal";
 
 export default function App() {
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [brent, setBrent] = useState(93.09);
   const [ttf, setTtf] = useState(48.50);
   const [selic, setSelic] = useState(10.75);
@@ -73,8 +78,21 @@ export default function App() {
     localStorage.setItem("selix_active_locale", activeLocale);
   }, [activeLocale]);
 
-  // Active secondary panel toggle: default is subscription payments GUI
-  const [activeSecondaryPanel, setActiveSecondaryPanel] = useState<"watchdog" | "subscription">("subscription");
+  // Active secondary panel toggle: default is subscription payments GUI, extended with dynamic SelixBolt Inference option
+  const [activeSecondaryPanel, setActiveSecondaryPanel] = useState<"watchdog" | "subscription" | "selixbolt" | "moltbook">("moltbook");
+
+  // Active Companion Tab for unified RAG Chat & Moltbook network selection
+  const [activeCompanionTab, setActiveCompanionTab] = useState<"selix" | "moltbook">("moltbook");
+
+  // Dynamic system-wide wallpapers (dominant Brent Crisis default, selectable Trends & Historic)
+  const [activeWallpaper, setActiveWallpaper] = useState<string>(() => {
+    return localStorage.getItem("selix_active_wallpaper") || "brent_crisis";
+  });
+
+  const handleWallpaperChange = (theme: string) => {
+    setActiveWallpaper(theme);
+    localStorage.setItem("selix_active_wallpaper", theme);
+  };
 
   const handleCheckoutSuccessUpgrade = async () => {
     const cachedEmail = localStorage.getItem("selix_user_email");
@@ -409,6 +427,49 @@ export default function App() {
     }
   };
 
+  // Trigger special geopolitical Trump-Netanyahu energy crash and Brazilian bio-immunization scenario
+  const handleTriggerSpecialScenario = async () => {
+    speak("Iniciando simulação especial de blindagem econômica. Petróleo disparando pós tensão Trump Netanyahu, seguido de neutralizacão do Bio M M E e corte de juros para um dígito.", true);
+    
+    const targetBrent = 98.75;
+    const targetTtf = 54.20;
+    const targetSelic = 9.25;
+    const targetSentiment = 88;
+    
+    setBrent(targetBrent);
+    setTtf(targetTtf);
+    setSelic(targetSelic);
+    setSentiment(targetSentiment);
+    setRating("Soberano A+");
+    setInvestmentGrade(true);
+    setActiveWallpaper("brazil_recovery");
+    
+    try {
+      await fetch("/api/state/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          brent: targetBrent, 
+          ttf: targetTtf, 
+          selic: targetSelic, 
+          sentiment: targetSentiment,
+          rating: "Soberano A+",
+          investmentGrade: true
+        }),
+      });
+    } catch (err) {
+      console.error(err);
+    }
+    
+    await handleInjectLog("WARN", "CRAWLER", "🚨 TENSÕES TRUMP-NETANYAHU PROVOCAM ENERGIA CRASH GLOBAL: Brent a $98.75, TTF Gas a €54.20.");
+    await handleInjectLog("INFO", "SYSTEM", "🌿 Acionando Bio-Estratégia integrada de Blends Ex e Bx (MME + MMA). Bloco de imunidade ativo.");
+    await handleInjectLog("SUCCESS", "SYSTEM", "✅ Blindagem ecológica neutralizou 100% dos efeitos inflacionários exógenos.");
+    await handleInjectLog("SUCCESS", "RAG", "🧠 Teorema 1 e 4 re-validados via provador Lean 4. Copom corta taxa básica SELIC para 9.25% (Abaixo de 2 dígitos!).");
+    await handleInjectLog("SUCCESS", "SYSTEM", "⭐️ RATING PROMOVIDO PARA SOBERANO A+. BRASIL ESTABELECE CERTIFICAÇÃO INVESTMENT GRADE!");
+    
+    speak("Blindagem efetuada com sucesso absoluto. Selic reduzida para nove vírgula vinte e cinco por cento. Brasil oficializa Grau de Investimento com selo Soberano A-Mais.", true);
+  };
+
   // Publish newly composed thread to feed
   const handlePublishThread = async (posts: string[]) => {
     try {
@@ -549,6 +610,39 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
 
   const themeColors = getThemeColors();
 
+  // Dynamic wallpaper background themes helper
+  const getWallpaperStyles = () => {
+    switch (activeWallpaper) {
+      case "us_elections":
+        return {
+          bgClass: "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950/20 via-slate-950 to-cyan-950/20",
+          glowPrimary: "bg-indigo-600/15",
+          glowSecondary: "bg-cyan-500/10",
+        };
+      case "brazil_recovery":
+        return {
+          bgClass: "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-950/15 via-slate-950 to-teal-950/15",
+          glowPrimary: "bg-emerald-600/15",
+          glowSecondary: "bg-teal-500/10",
+        };
+      case "copom_1999":
+        return {
+          bgClass: "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-amber-950/10",
+          glowPrimary: "bg-amber-600/15",
+          glowSecondary: "bg-amber-950/20",
+        };
+      case "brent_crisis":
+      default:
+        return {
+          bgClass: "bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-950/25 via-slate-950 to-orange-950/15",
+          glowPrimary: "bg-red-650/15",
+          glowSecondary: "bg-orange-655/10",
+        };
+    }
+  };
+
+  const wpStyles = getWallpaperStyles();
+
   if (isLoadingState) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center font-mono text-xs text-amber-500 gap-3">
@@ -559,10 +653,10 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-x-hidden font-sans" id="selic-app-viewport">
+    <div className={`min-h-screen ${wpStyles.bgClass} text-slate-100 flex flex-col relative overflow-x-hidden font-sans`} id="selic-app-viewport">
       {/* Decorative ambient gradients */}
-      <div className={`absolute top-[-10%] left-[-15%] w-[50%] h-[50%] ${themeColors.glowPrimary} blur-[120px] rounded-full pointer-events-none`} />
-      <div className={`absolute bottom-[-10%] right-[-15%] w-[50%] h-[50%] ${themeColors.glowSecondary} blur-[120px] rounded-full pointer-events-none`} />
+      <div className={`absolute top-[-10%] left-[-15%] w-[50%] h-[50%] ${wpStyles.glowPrimary} blur-[120px] rounded-full pointer-events-none`} />
+      <div className={`absolute bottom-[-10%] right-[-15%] w-[50%] h-[50%] ${wpStyles.glowSecondary} blur-[120px] rounded-full pointer-events-none`} />
 
       {/* COMPACT MAIN HEADER */}
       <header className="border-b border-slate-900 bg-slate-950/60 backdrop-blur px-6 py-4 sticky top-0 z-30 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -620,6 +714,15 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
             {isSyncingLive ? "CRAWLING..." : "LIVE SYNC"}
           </button>
 
+          <button
+            onClick={() => setIsConfigModalOpen(true)}
+            className="p-1.5 px-3 border rounded text-xs bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border-indigo-500/40 hover:border-indigo-505 transition-all flex items-center gap-1.5 font-bold font-mono cursor-pointer shadow-lg shadow-indigo-950/10 animate-fade-in"
+            title="Abrir Painel de Ajustes Globais, Sliders de Mercado, Fila SQLite e Seleção de Persona"
+          >
+            <Settings className="w-3.5 h-3.5 text-indigo-405 animate-spin-slow" />
+            <span>CONFIGS GLOBAIS</span>
+          </button>
+
           {/* User Sign-In/Auth area */}
           <UserLoginArea
             currentUser={currentUser}
@@ -631,7 +734,143 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
 
       {/* DASHBOARD CONTAINER - BENTO GRID DESIGN */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6" id="dashboard-content">
-        
+
+        {/* NAV RIBBON: CENTRAL DE NAVEGAÇÃO MULTI-CHAT & CORE PANELS */}
+        <div id="gui-operator-ribbon" className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3 flex flex-col xl:flex-row items-center justify-between gap-4 backdrop-blur shadow-2xl relative">
+          <div className="absolute top-0 left-10 w-24 h-6 bg-indigo-500/10 blur-xl rounded-full" />
+          
+          <div className="flex items-center gap-2.5">
+            <div className="p-1 px-2 rounded bg-indigo-950 text-indigo-400 border border-indigo-900/30 text-[10px] font-black font-mono tracking-tight animate-pulse">
+              GUI PANEL v5.1
+            </div>
+            <div>
+              <span className="text-2xs font-bold text-slate-200 uppercase tracking-wide block">Painel de Coordenação de Agentes</span>
+              <span className="text-[9px] text-slate-500 block font-mono font-black">SELEÇÃO ULTRA-RÁPIDA ENTRE MOTOR SELIX E REDE MOLTBOOK</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap font-mono text-[9px]">
+            {/* 1. CHAT SELIX */}
+            <button
+              onClick={() => {
+                setActiveCompanionTab("selix");
+                speak("Selix Co-piloto selecionado.", true);
+                const el = document.getElementById("analyst-wrapper");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all cursor-pointer ${
+                activeCompanionTab === "selix"
+                  ? "bg-amber-500 border-amber-400 text-slate-950 font-black shadow-md shadow-amber-500/10"
+                  : "bg-slate-950/60 border-slate-850 text-slate-400 hover:text-slate-200 hover:bg-slate-850"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${activeCompanionTab === "selix" ? "bg-slate-950 animate-ping" : "bg-slate-600"}`} />
+              💬 CHAT SELIX {activeCompanionTab === "selix" && <span className="text-[8px] bg-slate-950 text-amber-500 px-1 rounded font-black">ATIVO</span>}
+            </button>
+
+            {/* 2. MOLTBOOK */}
+            <button
+              onClick={() => {
+                setActiveCompanionTab("moltbook");
+                setActiveSecondaryPanel("moltbook");
+                speak("Rede Moltbook de agentes selecionada.", true);
+                const el = document.getElementById("analyst-wrapper") || document.getElementById("logs-console-wrapper");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all cursor-pointer ${
+                activeCompanionTab === "moltbook"
+                  ? "bg-rose-600 border-rose-500 text-slate-100 font-extrabold shadow-md shadow-rose-600/10"
+                  : "bg-slate-950/60 border-slate-850 text-slate-400 hover:text-rose-450 hover:bg-slate-850"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${activeCompanionTab === "moltbook" ? "bg-slate-100 animate-ping" : "bg-slate-600"}`} />
+              🦞 MOLTBOOK CENTRAL {activeCompanionTab === "moltbook" && <span className="text-[8px] bg-slate-100 text-rose-600 px-1 rounded font-black">ATIVO</span>}
+            </button>
+
+            <div className="w-[1px] h-4 bg-slate-800 hidden xl:block mx-1" />
+
+            {/* 3. SELIXBOLT */}
+            <button
+              onClick={() => {
+                setActiveSecondaryPanel("selixbolt");
+                speak("Selixbolt co-processador selecionado.", true);
+                const el = document.getElementById("logs-console-wrapper");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeSecondaryPanel === "selixbolt"
+                  ? "bg-amber-600 border-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/10"
+                  : "bg-slate-950/60 border-slate-850 text-slate-400 hover:text-indigo-400"
+              }`}
+            >
+              ⚡ SELIXBOLT
+            </button>
+
+            {/* 4. ANALYTICS & LOGS */}
+            <button
+              onClick={() => {
+                setActiveSecondaryPanel("watchdog");
+                speak("Painel de logs analíticos aberto.", true);
+                const el = document.getElementById("logs-console-wrapper");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeSecondaryPanel === "watchdog"
+                  ? "bg-indigo-650 border-indigo-500 text-slate-100 font-extrabold shadow-md shadow-indigo-600/10"
+                  : "bg-slate-950/60 border-slate-850 text-slate-400 hover:text-indigo-400"
+              }`}
+            >
+              📊 ANALYTICS & LOGS
+            </button>
+
+            {/* 5. ASSINATURA CLOUD */}
+            <button
+              onClick={() => {
+                setActiveSecondaryPanel("subscription");
+                speak("Gestor de assinatura de infraestrutura aberto.", true);
+                const el = document.getElementById("logs-console-wrapper");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+              className={`px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeSecondaryPanel === "subscription"
+                  ? "bg-indigo-950 border-indigo-500 text-indigo-400 font-extrabold shadow-md shadow-indigo-500/10"
+                  : "bg-slate-950/60 border-slate-850 text-slate-400 hover:text-indigo-400"
+              }`}
+            >
+              ⭐ ASSINATURAS
+            </button>
+          </div>
+        </div>
+
+        {/* SPECIAL MACRO SCENARIO SIMULATOR BANNER */}
+        <div className="bg-gradient-to-r from-red-950/40 via-slate-900/90 to-emerald-950/45 border border-amber-500/20 rounded-2xl p-4 sm:p-5 shadow-2xl relative overflow-hidden backdrop-blur flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4" id="special-scenario-banner">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
+
+          <div className="space-y-1.5 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="p-1 px-1.5 rounded bg-amber-500 text-slate-950 font-mono font-black text-[8px] tracking-tight">
+                CENÁRIO CRÍTICO
+              </span>
+              <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-100 flex items-center gap-1">
+                <span>⚡ Shock Choque Trump-Netanyahu & Blindagem Bio-Econômica</span>
+              </h4>
+            </div>
+            <p className="text-[10px] text-slate-405 font-sans max-w-4xl leading-relaxed text-slate-350">
+              A escalada militar provoca um <strong>Energy Crash</strong> (pressões extremas sobre o Brent). Contudo, a <strong>bio-estratégia brasileira de blends Ex/Bx (MME & MMA)</strong> atua como barreira cognitiva e física. Ao extinguir a inflação importada de fertilizantes e refino, desonera o Banco Central e permite conduzir a <strong>taxa SELIC para patamar de 1 dígito (9.25% a.a.)</strong>. O resultado é a imediata <strong>recuperação do Investment Grade (Grau de Investimento Soberano A+)</strong> brasileiro.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 md:self-center">
+            <button
+              onClick={handleTriggerSpecialScenario}
+              className="bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 hover:from-amber-400 hover:to-emerald-400 font-black text-2xs px-4.5 py-3 rounded-xl transition-all hover:scale-[1.03] shadow-lg shadow-amber-500/15 cursor-pointer flex items-center gap-1.5 uppercase font-mono select-none"
+            >
+              <span>🔥 Simular Crash & Recuperação</span>
+            </button>
+          </div>
+        </div>
+
         {/* Guia de Explanacao por Voz */}
         <GuiaDeVoz
           brent={brent}
@@ -646,55 +885,28 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
         <section className="bg-slate-900/40 border border-slate-900 rounded-xl p-5 space-y-4 backdrop-blur shadow-xl relative" id="persona-workspace-section">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full pointer-events-none" />
           
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-slate-850 pb-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-slate-850 pb-3">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded bg-indigo-950 text-indigo-400">
                 <Sparkles className="w-4 h-4 animate-spin-slow" />
               </span>
               <div>
                 <h2 className="text-xs font-bold font-mono text-slate-100 uppercase tracking-wider block">
-                  Seletor de Perfil de Público-Alvo: Adaptabilidade Geral
+                  Perspectiva do Público Ativo: {SELIX_PERSONAS.find(p => p.id === activePersona)?.emoji} {SELIX_PERSONAS.find(p => p.id === activePersona)?.name}
                 </h2>
                 <div className="text-4xs text-slate-500 font-mono">
-                  CLIQUE EM UM PERFIL DE INTERESSE ABAIXO PARA ADAPTAR A EXPERIÊNCIA DO DASHBOARD EM TEMPO REAL.
+                  O DASHBOARD RECALCULA SUAS DIRETRIZES CONFORME OS ALVOS SOCIAIS DESTE PERFIL DE INTERESSE.
                 </div>
               </div>
             </div>
-            <div className="text-3xs font-mono bg-indigo-950/40 text-indigo-400 border border-indigo-905/30 rounded px-2.5 py-1 flex items-center gap-1.5 shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-              MODO ATIVO: <strong className="uppercase">{activePersona}</strong>
-            </div>
-          </div>
-
-          {/* Persona quick select grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2" id="persona-tabs-bar">
-            {SELIX_PERSONAS.map((p) => {
-              const isSelected = activePersona === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setActivePersona(p.id);
-                  }}
-                  className={`p-2.5 rounded-lg border text-left transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-between h-20 ${
-                    isSelected
-                      ? "bg-slate-900 border-indigo-500 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,0.1)]"
-                      : "bg-slate-950/60 border-slate-850 hover:bg-slate-850 text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-base select-none">{p.emoji}</span>
-                    {isSelected && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                    )}
-                  </div>
-                  <div>
-                    <span className="font-extrabold text-[10px] block truncate select-none leading-tight">{p.name}</span>
-                    <span className="text-[7.5px] text-slate-500 block truncate select-none font-mono mt-0.5">{p.role}</span>
-                  </div>
-                </button>
-              );
-            })}
+            
+            <button
+              onClick={() => setIsConfigModalOpen(true)}
+              className="text-3xs font-mono bg-indigo-950 hover:bg-indigo-900 text-indigo-405 hover:text-indigo-300 border border-indigo-500/30 rounded px-2.5 py-1.5 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer select-none"
+            >
+              <Settings className="w-3 h-3 animate-spin-slow" />
+              MUDAR PERSONA (⚙️)
+            </button>
           </div>
 
           {/* Active Persona Insight Showcase Widget */}
@@ -929,6 +1141,11 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
             <ConsolaAnalista
               onSendMessage={handleCallAgentQuery}
               isPending={isAiPending}
+              onInjectLog={handleInjectLog}
+              brent={brent}
+              selic={selic}
+              activeCompanionTab={activeCompanionTab}
+              onChangeCompanionTab={setActiveCompanionTab}
             />
           </div>
         </div>
@@ -952,27 +1169,41 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-slate-350 uppercase tracking-tight text-[10px] font-bold">GERENCIADOR DE ASSINATURA & PAGAMENTO</span>
+                <span className="text-slate-350 uppercase tracking-tight text-[10px] font-bold">GERENCIADOR DE ASSINATURA & INFRAESTRUTURA</span>
               </div>
-              <div className="flex gap-1 bg-slate-950 p-1 rounded-lg border border-slate-850">
+              <div className="flex gap-1 bg-slate-950 p-1 rounded-lg border border-slate-850 flex-wrap font-mono relative">
                 <button
                   type="button"
                   onClick={() => setActiveSecondaryPanel("subscription")}
-                  className={`px-2.5 py-1 rounded transition-all text-3xs font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "subscription" ? "bg-indigo-650 text-slate-100" : "text-slate-550 hover:text-slate-350"}`}
+                  className={`px-2 py-0.5 rounded transition-all text-[8px] font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "subscription" ? "bg-indigo-650 text-slate-100" : "text-slate-500 hover:text-slate-400"}`}
                 >
                   ⭐ ASSINATURA (CLOUD)
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveSecondaryPanel("watchdog")}
-                  className={`px-2.5 py-1 rounded transition-all text-xs font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "watchdog" ? "bg-slate-800 text-indigo-400 border border-slate-700" : "text-slate-500 hover:text-slate-400"}`}
+                  className={`px-2 py-0.5 rounded transition-all text-[8px] font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "watchdog" ? "bg-slate-800 text-indigo-400 border border-slate-700" : "text-slate-550 hover:text-slate-400"}`}
                 >
-                  📋 Watchdog (Legacy Termux)
+                  📊 ANALYTICS & LOGS
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSecondaryPanel("selixbolt")}
+                  className={`px-2 py-0.5 rounded transition-all text-[8px] font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "selixbolt" ? "bg-amber-600 text-slate-950" : "text-slate-550 hover:text-slate-400"}`}
+                >
+                  ⚡ SELIXBOLT
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSecondaryPanel("moltbook")}
+                  className={`px-2 py-0.5 rounded transition-all text-[8px] font-bold uppercase cursor-pointer select-none ${activeSecondaryPanel === "moltbook" ? "bg-rose-600 text-slate-100" : "text-slate-555 hover:text-rose-400"}`}
+                >
+                  🦞 MOLTBOOK
                 </button>
               </div>
             </div>
 
-            {activeSecondaryPanel === "subscription" ? (
+            {activeSecondaryPanel === "subscription" && (
               <RegionalBillingPanel
                 activeLocale={activeLocale}
                 onLanguageChange={(newLocale) => {
@@ -992,11 +1223,28 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
                   handleInjectLog(mappedLevel, mappedCategory, message);
                 }}
               />
-            ) : (
+            )}
+            {activeSecondaryPanel === "watchdog" && (
               <ConsolaLog
                 logs={logs}
                 watchdog={systemWatchdog}
                 onTriggerSelfHeal={handleTriggerSelfHeal}
+                onInjectLog={handleInjectLog}
+                brent={brent}
+                selic={selic}
+                activeWallpaper={activeWallpaper}
+                onWallpaperChange={handleWallpaperChange}
+              />
+            )}
+            {activeSecondaryPanel === "selixbolt" && (
+              <SelixBolt
+                onInjectLog={handleInjectLog}
+                currentUser={currentUser}
+                totalRevenue={8940.00}
+              />
+            )}
+            {activeSecondaryPanel === "moltbook" && (
+              <SelixMoltbook
                 onInjectLog={handleInjectLog}
                 brent={brent}
                 selic={selic}
@@ -1006,12 +1254,6 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
 
           {/* Section 2B: Bluesky Profile and Thread composer (powered by Gemini) */}
           <div id="bluesky-sim-wrapper">
-            <button 
-              id="trigger-threads-refresh" 
-              onClick={fetchThreads} 
-              className="hidden" 
-              style={{ display: "none" }}
-            />
             <BlueskySim
               threads={threads}
               onPublishThread={handlePublishThread}
@@ -1024,206 +1266,34 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           </div>
         </div>
 
-        {/* ROW 3: Concurrent Traffic Traffic Control & SQLite Waiting List Registration */}
-        <section className="bg-slate-900/60 border border-slate-900 rounded-xl p-6 space-y-6 backdrop-blur shadow-2xl" id="trafe-control-wrapper">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-850 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg">
-                <Users className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <h2 className="text-sm font-extrabold text-slate-100 tracking-tight font-sans">
-                  MONITOR DE TRÁFEGO CONCORRENTE & REDUNDÂNCIA ATIVA
-                </h2>
-                <p className="text-3xs text-slate-500 font-mono">
-                  Gargalo de Hardware do A23 (Termux, limits 384MB RAM) & Filtro de Lista de Espera ao atingir 90%
-                </p>
-              </div>
+        {/* ROW 3: Concurrent Traffic Traffic Control & SQLite Waiting List Registration Summary */}
+        <section className="bg-slate-900/60 border border-slate-900 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur shadow-2xl animate-fade-in" id="trafe-control-wrapper">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-505/10 border border-indigo-500/20 text-indigo-400 rounded-lg shrink-0">
+              <Users className="w-4 h-4 animate-pulse" />
             </div>
-            
-            <div className="flex items-center gap-3 font-mono text-3xs">
-              <div className="bg-slate-950 border border-slate-850 px-2.5 py-1 rounded flex items-center gap-1.5">
-                <span className="text-slate-500">PROMOÇÃO:</span>
-                <strong className="text-violet-400">ATIVADA (5 MIN)</strong>
-              </div>
-              <div className="bg-slate-950 border border-slate-850 px-2.5 py-1 rounded flex items-center gap-1.5">
-                <span className="text-slate-500">LIMITE REGISTRO:</span>
-                <strong className="text-amber-500">90% CAPACIDADE</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* COLUMN 1: Explanation & Simulated Users Config */}
-            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col justify-between">
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
-                  <Clock className="w-3.5 h-3.5" /> METRICAS DE CONCORRÊNCIA
-                </h3>
-                <p className="text-3xs text-slate-450 leading-relaxed font-sans">
-                  O Selix executa localmente dentro da infraestrutura hermética do celular <strong className="text-slate-300">Samsung A23 (Termux Dev Node)</strong>. 
-                  Com limites processuais impostos para evitar sobressaltos e estagnação térmica, o limite seguro foi fixado em <strong className="text-slate-300">20 usuários simultâneos</strong>. 
-                  Atingindo 90% de estresse térmico/processamento (18 usuários ou mais), novos visitantes recebem um tempo de navegação bônus promocional de 5 minutos, sendo encaminhados à nossa lista de espera ativa persistida de forma segura usando <strong className="text-slate-300">SQLite3 local</strong>.
-                </p>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t border-slate-850/60 font-mono">
-                <div className="flex items-center justify-between text-3xs text-slate-400">
-                  <span>USUÁRIOS SIMULTÂNEOS:</span>
-                  <span className={`font-bold ${simultaneousUsers >= 18 ? "text-amber-400 animate-pulse" : "text-emerald-400"}`}>
-                    {simultaneousUsers} / {maxAllowedUsers} ({Math.round((simultaneousUsers / maxAllowedUsers) * 100)}%)
-                  </span>
-                </div>
-                
-                {/* Simulated Users Slider */}
-                <div className="space-y-1">
-                  <input
-                    type="range"
-                    min="0"
-                    max="20"
-                    value={simultaneousUsers}
-                    onChange={(e) => handleUpdateUsers(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  />
-                  <div className="flex justify-between text-[8px] text-slate-600">
-                    <span>Sessão Vazia</span>
-                    <span>90% Alerta</span>
-                    <span>Capacidade Max (20)</span>
-                  </div>
-                </div>
-
-                {/* Capacity Status Card */}
+            <div>
+              <h4 className="text-xs font-extrabold text-slate-100 tracking-tight font-sans uppercase flex items-center gap-2">
+                <span>Monitor de Concorrência & SQLite3 Activo</span>
                 {simultaneousUsers >= 18 ? (
-                  <div className="p-3 bg-amber-950/30 border border-amber-500/30 text-amber-300 rounded flex items-start gap-2.5 animate-pulse text-3xs">
-                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-amber-450 block font-bold mb-0.5">ALERTA: 90% DA CAPACIDADE ALCANÇADA</strong>
-                      Novos usuários adicionais devem registrar-se na Lista de Espera persistente para liberar tokens de navegação promocional redundantes.
-                    </div>
-                  </div>
+                  <span className="p-0.5 px-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded font-mono font-black text-[7px] tracking-tight animate-pulse">90% ALERTA</span>
                 ) : (
-                  <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 text-emerald-300 rounded flex items-start gap-2.5 text-3xs">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <div>
-                      <strong className="text-emerald-400 block font-bold mb-0.5">STATUS DO SMARTPHONE: ESTÁVEL</strong>
-                      Acesso público disponível sem fila de espera ativa. Capacidade excedente disponível para redundância secundária.
-                    </div>
-                  </div>
+                  <span className="p-0.5 px-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded font-mono font-black text-[7px] tracking-tight">ESTÁVEL</span>
                 )}
-              </div>
+              </h4>
+              <p className="text-[10px] text-slate-400 font-sans mt-0.5">
+                Hardware Samsung A23 Dev Node (Termux, 384MB RAM). Ativos: <strong className="text-slate-200">{simultaneousUsers}/20 slots</strong>  simultâneos. {waitlistEntries.length} registrantes salvaguardados em SQLite.
+              </p>
             </div>
-
-            {/* COLUMN 2: Waitlist Registration Form */}
-            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col justify-between">
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
-                  <UserPlus className="w-4 h-4" /> REGISTRO DE FILA / REDUNDÂNCIA
-                </h3>
-                <p className="text-3xs text-slate-500 font-sans">
-                  Mesmo estando abaixo de 90% de estresse de hardware, você pode se pré-cadastrar preventivamente para garantir acessibilidade persistente através do segundo nó de redundância autônoma.
-                </p>
-              </div>
-
-              <form onSubmit={handleSubmitWaitlist} className="space-y-3 font-mono text-3xs text-slate-200">
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-400">NOME DO STAKEHOLDER / DEVA:</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: José Sobrinho Sobrinho"
-                    value={waitlistName}
-                    onChange={(e) => setWaitlistName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-400">TELEFONE DE CONTATO (SMS/WA):</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Ex: +55 (11) 99999-9999"
-                    value={waitlistPhone}
-                    onChange={(e) => setWaitlistPhone(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] text-slate-400">BLUESKY HANDLE (@):</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: @zeh-sobrinho.bsky.social"
-                    value={waitlistHandle}
-                    onChange={(e) => setWaitlistHandle(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-805 text-slate-200 rounded px-2.5 py-1.5 text-3xs outline-none"
-                  />
-                </div>
-
-                {waitlistSuccess && (
-                  <div className="text-[10px] text-emerald-400 bg-emerald-950/20 border border-emerald-500/20 rounded px-3 py-1.5 mt-2 animate-pulse">
-                    ✓ Registrado com sucesso no banco de dados SQLite local!
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isWaitlistSubmitting}
-                  className="w-full bg-indigo-900 hover:bg-indigo-850 disabled:opacity-50 text-slate-100 font-bold border border-indigo-700 text-3xs px-4 py-2 rounded transition-colors cursor-pointer flex items-center justify-center gap-1.5 uppercase font-mono tracking-wider mt-4"
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  {isWaitlistSubmitting ? "REGISTRANDO..." : "REQUISITAR ENTRADA NA FILA"}
-                </button>
-              </form>
-            </div>
-
-            {/* COLUMN 3: Real SQLite Waitlist Database Stored rows */}
-            <div className="lg:col-span-1 space-y-4 bg-slate-950/40 p-4 border border-slate-850/50 rounded-lg flex flex-col">
-              <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                <h3 className="text-xs font-bold text-indigo-400 flex items-center gap-2 font-mono">
-                  <List className="w-4 h-4" /> BANCO DE ESPERA (SQLITE FILE)
-                </h3>
-                <span className="text-4xs bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold">
-                  {waitlistEntries.length} FILTRADOS
-                </span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto max-h-[220px] pr-1 space-y-2.5 font-mono text-3xs">
-                {waitlistEntries.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-600 text-center py-10">
-                    <Database className="w-8 h-8 opacity-20 mb-2" />
-                    <span>Nenhum registro de fila</span>
-                    <span className="text-[9px] opacity-60">Tabela SQLite SQLite_waitlist ativa</span>
-                  </div>
-                ) : (
-                  waitlistEntries.map((row: any, i: number) => (
-                    <div key={row.id || i} className="p-2.5 bg-slate-900 border border-slate-850 rounded hover:border-slate-800 transition-colors">
-                      <div className="flex items-center justify-between text-slate-400 font-extrabold mb-1">
-                        <span className="text-indigo-400">ID #{row.id || i+1}</span>
-                        <span className="text-[9px] text-slate-600 font-normal">
-                          {new Date(row.timestamp).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="space-y-0.5 text-[10px]">
-                        <div className="text-slate-300">
-                          Nome: <strong className="text-slate-200">{row.name}</strong>
-                        </div>
-                        <div className="text-slate-500 text-[9px]">
-                          Tel: <strong className="text-slate-400">{row.phone}</strong>
-                        </div>
-                        <div className="text-indigo-400/80 text-[9px]">
-                          Handle: <strong>{row.handle}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
           </div>
+          
+          <button
+            onClick={() => setIsConfigModalOpen(true)}
+            className="w-full sm:w-auto text-3xs font-mono bg-slate-950 hover:bg-slate-855 hover:text-indigo-405 border border-slate-850 rounded-lg px-3.5 py-2 flex items-center justify-center gap-1.5 shrink-0 transition-all cursor-pointer select-none"
+          >
+            <Database className="w-3.5 h-3.5 text-indigo-405 animate-pulse" />
+            REGISTRO DE FILA / REDUNDÂNCIA (⚙️)
+          </button>
         </section>
 
         {/* ROW 4: Lean 4 Consistency Proof Mathematics Playground */}
@@ -1244,6 +1314,39 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
           <span>ZERO HALLUCINATION BOUNDS COMPILER ACTIVE</span>
         </div>
       </footer>
+
+      <ConfigModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        brent={brent}
+        onUpdateBrent={setBrent}
+        ttf={ttf}
+        onUpdateTtf={setTtf}
+        selic={selic}
+        onUpdateSelic={setSelic}
+        sentiment={sentiment}
+        onUpdateSentiment={setSentiment}
+        activeWallpaper={activeWallpaper}
+        onWallpaperChange={handleWallpaperChange}
+        activeLocale={activeLocale}
+        onLanguageChange={setActiveLocale}
+        activePersona={activePersona}
+        onChangePersona={setActivePersona}
+        simultaneousUsers={simultaneousUsers}
+        maxAllowedUsers={maxAllowedUsers}
+        onUpdateUsers={handleUpdateUsers}
+        waitlistName={waitlistName}
+        setWaitlistName={setWaitlistName}
+        waitlistPhone={waitlistPhone}
+        setWaitlistPhone={setWaitlistPhone}
+        waitlistHandle={waitlistHandle}
+        setWaitlistHandle={setWaitlistHandle}
+        isWaitlistSubmitting={isWaitlistSubmitting}
+        waitlistSuccess={waitlistSuccess}
+        onSubmitWaitlist={handleSubmitWaitlist}
+        waitlistEntries={waitlistEntries}
+        onTriggerSpecialScenario={handleTriggerSpecialScenario}
+      />
     </div>
   );
 }
