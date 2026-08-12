@@ -1,0 +1,12 @@
+{
+  "name": "Selix",
+  "description": "Plataforma tática e simuladora de reestruturação societária, faturamento com Stripe e precificação em regime de Recuperação Judicial sob a perspectiva da Taylor Rule brasileira.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
