@@ -25,9 +25,9 @@ import ConfigModal from "./components/ConfigModal";
 
 export default function App() {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [brent, setBrent] = useState(93.09);
+  const [brent, setBrent] = useState<number | null>(null);
   const [ttf, setTtf] = useState(48.50);
-  const [selic, setSelic] = useState(10.75);
+  const [selic, setSelic] = useState<number | null>(null);
   const [sentiment, setSentiment] = useState(59);
   const [rating, setRating] = useState("BBB-");
   const [investmentGrade, setInvestmentGrade] = useState(false);
@@ -602,7 +602,7 @@ Para mitigar a volatilidade cambial e manter a inflação estável sob hardware 
         `📖 [RAG / HEURÍSTICO LOCAL] (Calculado via regras locais de Taylor e base de dados JSON)
 Perspectiva de Audiência: ${pConfig.name}
 Parâmetros vigentes: Selic = ${selic.toFixed(2)}%, Petróleo Brent = $${brent.toFixed(2)}.
-Ajuste da Regra de Taylor recomenda juros ótimos de 9.48% (desvio atual de ${(selic - 9.48).toFixed(2)} pontos percentuais).
+Ajuste da Regra de Taylor recomenda juros ótimos conforme snapshot oficial (desvio atual de ${(selic - (official?.selic_ideal ?? selic)).toFixed(2)} pontos percentuais).
 Gargalo de Hardware de 384MB preservado via busca binária limpa.`,
         `📖 [RAG / HEURÍSTICO LOCAL] (Local context vectors retrieval: OK)
 A bio-estratégia verde de blends Ex/Bx desenvolvida pelo Ministério de Minas e Energia (MME) neutraliza o choque geopolítico internacional de commodities. Sistema provativo Lean 4 garante zero-fallback e estabilidade estrutural.`
@@ -687,9 +687,9 @@ Formato estrito do retorno: Responda APENAS com um array JSON válido contendo e
     { date: "2026-05-19", brent: 82.8, selic: 10.5, sentiment: 60 },
     { date: "2026-05-22", brent: 84.15, selic: 10.5, sentiment: 67 },
     { date: "2026-05-26", brent: 83.9, selic: 10.5, sentiment: 64 },
-    { date: "2026-05-29", brent: 84.6, selic: 10.75, sentiment: 52 },
-    { date: "2026-06-02", brent: 85.3, selic: 10.75, sentiment: 56 },
-    { date: "2026-06-04", brent: 84.95, selic: 10.75, sentiment: 55 },
+    { date: "2026-05-29", brent: 84.6, selic: null, sentiment: 52 },
+    { date: "2026-06-02", brent: 85.3, selic: null, sentiment: 56 },
+    { date: "2026-06-04", brent: 84.95, selic: null, sentiment: 55 },
     { date: "2026-06-06", brent: brent, selic: selic, sentiment: sentiment },
   ];
 

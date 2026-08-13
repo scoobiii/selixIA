@@ -12,10 +12,10 @@ export const HISTORIC_DATA: EconomicRecord[] = [
   { date: "2026-05-19", brent: 82.80, selic: 10.50, sentiment: 60, brentMA: 82.55, selicTrend: "stable" },
   { date: "2026-05-22", brent: 84.15, selic: 10.50, sentiment: 67, brentMA: 82.74, selicTrend: "stable" },
   { date: "2026-05-26", brent: 83.90, selic: 10.50, sentiment: 64, brentMA: 83.27, selicTrend: "stable" },
-  { date: "2026-05-29", brent: 84.60, selic: 10.75, sentiment: 52, brentMA: 83.71, selicTrend: "up" },
-  { date: "2026-06-02", brent: 85.30, selic: 10.75, sentiment: 56, brentMA: 84.11, selicTrend: "stable" },
-  { date: "2026-06-04", brent: 84.95, selic: 10.75, sentiment: 55, brentMA: 84.51, selicTrend: "stable" },
-  { date: "2026-06-06", brent: 85.80, selic: 10.75, sentiment: 59, brentMA: 84.91, selicTrend: "stable" },
+  { date: "2026-05-29", brent: 84.60, selic: null as any, sentiment: 52, brentMA: 83.71, selicTrend: "up" },
+  { date: "2026-06-02", brent: 85.30, selic: null as any, sentiment: 56, brentMA: 84.11, selicTrend: "stable" },
+  { date: "2026-06-04", brent: 84.95, selic: null as any, sentiment: 55, brentMA: 84.51, selicTrend: "stable" },
+  { date: "2026-06-06", brent: 85.80, selic: null as any, sentiment: 59, brentMA: 84.91, selicTrend: "stable" },
 ];
 
 export const THEOREMS: SelixTheorem[] = [
@@ -70,7 +70,7 @@ by
   cases h_meeting with
   | Decision k => use k; rfl
   | NoChanges => use 0; simp`,
-    visualProof: "COPOM interest rate: 10.50% → 10.75% (+25 bps) is valid | Transitions to 10.63% are blocked.",
+    visualProof: "COPOM interest rate: ciclo COPOM (valores via fonte oficial) (+25 bps) is valid | Transitions to 10.63% are blocked.",
   },
   {
     id: "termux-sandboxing",

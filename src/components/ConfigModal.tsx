@@ -200,7 +200,7 @@ export default function ConfigModal({
       { prg: 25, step: "Configurando descompactador bitwise em C++ / WASM…", log: "Instalando @selix/decompression-bitwise-wasm… (Concluído)" },
       { prg: 50, step: "Baixando pesos de 1-bit (7.4MB) do HuggingFace…", log: "Baixado 'qwen-0.5B-1bit-matrix.bin' - Tamanho real: 7.42 MB." },
       { prg: 75, step: "Compilando aceleradores locais para hardware móvel…", log: "Compilação bem-sucedida! Alocados kernels internos de tensores." },
-      { prg: 90, step: "Fazendo teste unitário (Inference latency benchmarks)…", log: "Auto-teste OK: 'Selic ótima calculada em 9.48%' gerado em 88ms." },
+      { prg: 90, step: "Fazendo teste unitário (Inference latency benchmarks)…", log: "Auto-teste OK: 'Selic ótima conforme snapshot oficial' gerado em 88ms." },
       { prg: 100, step: "Modelo Leve quantizado liberado!", log: "Inference server habilitado com sucesso. Cache ativado localmente." }
     ];
 

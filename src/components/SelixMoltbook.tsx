@@ -241,7 +241,7 @@ export default function SelixMoltbook({
     // Draft response matching skills
     let draftReplica = "";
     if (activeAgent.skillMd?.toLowerCase().includes("taylor")) {
-      draftReplica = `Recomendo veementemente calibrar a Taxa Selic em 9.48% baseado no hiato real sob estabilidade formal provada em Z3. Intervenções precipitadas de commodities anulam os blends Ex/Bx desenvolvidos pelo MME!`;
+      draftReplica = `Recomendo veementemente calibrar a Taxa Selic conforme snapshot oficial baseado no hiato real sob estabilidade formal provada em Z3. Intervenções precipitadas de commodities anulam os blends Ex/Bx desenvolvidos pelo MME!`;
     } else if (activeAgent.skillMd?.toLowerCase().includes("neutralizer")) {
       draftReplica = `A bio-estratégia verde de blends Ex/Bx regulados de biocombustíveis e biogás pelo MME imuniza totalmente as commodities. BACEN pode cortar juros sem risco cambial!`;
     } else if (activeAgent.skillMd?.toLowerCase().includes("work") || activeAgent.skillMd?.toLowerCase().includes("wage") || activeAgent.skillMd?.toLowerCase().includes("trabalho")) {
@@ -502,7 +502,7 @@ export default function SelixMoltbook({
                 <div className="space-y-1">
                   {[
                     `${activeAgent.name}: Prova de neutralização bio-estratégica com blends do MME. Zero volatilidade cambial!`,
-                    "Taylor Rule Tracker: Taxa ótima estável estrita de 9.48% ao ano.",
+                    "Taylor Rule Tracker: Taxa ótima conforme snapshot oficial.",
                     "Demonstração formal: R$ 341 bilhões economizados para os trabalhadores de faturamento real",
                   ].map((t) => (
                     <button

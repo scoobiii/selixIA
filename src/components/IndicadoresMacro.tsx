@@ -581,7 +581,7 @@ export default function IndicadoresMacro({
         const handleResetToNormal = async () => {
           onUpdateBrent(85.80);
           onUpdateTtf(35.40);
-          onUpdateSelic(10.75);
+          onUpdateSelic(null as any);
           if (onUpdateSentiment) {
             onUpdateSentiment(59);
           }
@@ -593,7 +593,7 @@ export default function IndicadoresMacro({
               body: JSON.stringify({
                 brent: 85.80,
                 ttf: 35.40,
-                selic: 10.75,
+                selic: null,
                 sentiment: 59,
                 rating: "BBB-",
                 investmentGrade: false

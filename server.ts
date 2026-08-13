@@ -187,9 +187,9 @@ if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
 }
 
 // In-Memory state for simulation
-let currentBrent = 93.09;
+let currentBrent: number | null = null;
 let currentTtf = 48.50; // EUR/MWh natural gas
-let currentSelic = 10.75;
+let currentSelic: number | null = null;
 let currentSentiment = 59;
 let currentRating = "BBB-";
 let currentInvestmentGrade = false;
@@ -203,7 +203,7 @@ const mockLogs = [
   { id: "1", timestamp: new Date(Date.now() - 3600000 * 5).toLocaleTimeString(), level: "INFO", category: "SYSTEM", message: "Selix daemon v5.0 initialized on A23 core. Android Termux environment detected." },
   { id: "2", timestamp: new Date(Date.now() - 3600000 * 4.5).toLocaleTimeString(), level: "INFO", category: "WATCHDOG", message: "Watchdog started. Checking RAM usage: 85MB used of 384MB limit. System safe." },
   { id: "3", timestamp: new Date(Date.now() - 3600000 * 4).toLocaleTimeString(), level: "SUCCESS", category: "CRAWLER", message: "Brent Crude price collected successfully. Price: USD 84.60/bbl (Source A matching Source B)." },
-  { id: "4", timestamp: new Date(Date.now() - 3600000 * 3.5).toLocaleTimeString(), level: "SUCCESS", category: "CRAWLER", message: "Selic target rate collected successfully. Target Selic: 10.75% yr. COPOM decision parsed." },
+  { id: "4", timestamp: new Date(Date.now() - 3600000 * 3.5).toLocaleTimeString(), level: "SUCCESS", category: "CRAWLER", message: "Selic target rate collected successfully. Target Selic: (aguardando fonte oficial)." },
   { id: "5", timestamp: new Date(Date.now() - 3600000 * 3).toLocaleTimeString(), level: "INFO", category: "RAG", message: "Llama.cpp flushed. Preloaded economic context successfully indexed into local ChromaDB memory." },
   { id: "6", timestamp: new Date(Date.now() - 3600000 * 2).toLocaleTimeString(), level: "SUCCESS", category: "BLUESKY", message: "Bluesky thread published on @zeh-sobrinho.bsky.social successfully. Thread ID: bsky_tx921." },
   { id: "7", timestamp: new Date(Date.now() - 3600000 * 1.5).toLocaleTimeString(), level: "WARN", category: "CRAWLER", message: "Brent crawl Source A timeout. Switching to Source B backup... Resolved price: USD 84.95/bbl." },
@@ -526,9 +526,9 @@ app.get("/api/state", async (req, res) => {
     }
 
     res.json({
-      brent: parseFloat(currentBrent.toFixed(2)),
+      brent: currentBrent == null ? null : parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
-      selic: parseFloat(currentSelic.toFixed(2)),
+      selic: currentSelic == null ? null : parseFloat(currentSelic.toFixed(2)),
       sentiment: currentSentiment,
       rating: currentRating,
       investmentGrade: currentInvestmentGrade,
@@ -568,9 +568,9 @@ app.get("/api/state", async (req, res) => {
     } catch (_) {}
 
     res.json({
-      brent: parseFloat(currentBrent.toFixed(2)),
+      brent: currentBrent == null ? null : parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
-      selic: parseFloat(currentSelic.toFixed(2)),
+      selic: currentSelic == null ? null : parseFloat(currentSelic.toFixed(2)),
       sentiment: currentSentiment,
       rating: currentRating,
       investmentGrade: currentInvestmentGrade,
