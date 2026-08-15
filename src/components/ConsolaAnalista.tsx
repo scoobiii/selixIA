@@ -86,7 +86,7 @@ export default function ConsolaAnalista({
     { label: "⚡ Choque Trump-Netanyahu & Selic 1 dígito", text: "Estude o cenário onde o choque de energia e o Brent disparando pós escalada Trump-Netanyahu são neutralizados pela bio-estratégia de blends Ex/Bx do MME, mantendo Selic a 1 dígito (9.25% a.a.) e recuperando o Investment Grade soberano brasileiro." },
     { label: "Análise: Brent a $85 e Inflação", text: "Qual o impacto direto do petróleo Brent cotado a USD 85 nos custos de refino e consequentemente no IPCA brasileiro?" },
     { label: "Estudo MME: Mistura Ex e Bx", text: "Explique o cenário de neutralização onde o Brent está alto, mas é aniquilado pelo Ministério de Minas e Energia com a mistura especial Ex e Bx, aliviando a Selic para 1 dígito sem intervenção do BC." },
-    { label: "Avaliar Selic sob Regra de Taylor", text: "Com a Selic a 10.75%, inflação de 3.8% e hiato do produto em -0.7%, explique a recomendação da regra de Taylor e sua aderência às atas do COPOM." },
+    { label: "Avaliar Selic sob Regra de Taylor", text: "Com a Selic atual (fonte oficial), inflação de 3.8% e hiato do produto em -0.7%, explique a recomendação da regra de Taylor e sua aderência às atas do COPOM." },
     { label: "Explicar Teorema Zero-Fallback", text: "Como o Teorema 1 garante matematicamente a segurança anticongelamento e anticorrupção de dados ao monitorar Brent de múltiplas fontes?" },
     { label: "Auditar RAM de 384MB no Termux", text: "Como o Selix consegue rodar embeddings de RAG e um daemon de monitoramento sem exceder a restrição de hardware de 384MB de RAM no Android A23?" },
   ];
