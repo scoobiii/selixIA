@@ -2,6 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
+import { getOfficialSnapshot } from "./src/lib/selix-core";
 
 import express from "express";
 import path from "path";
@@ -525,6 +526,14 @@ app.get("/api/state", async (req, res) => {
       }
     }
 
+    let official = null;
+    try {
+      official = await getOfficialSnapshot();
+    } catch (e) {
+      console.error("official snapshot failed", e);
+      official = null;
+    }
+
     res.json({
       brent: currentBrent == null ? null : parseFloat(currentBrent.toFixed(2)),
       ttf: parseFloat(currentTtf.toFixed(2)),
@@ -544,7 +553,8 @@ app.get("/api/state", async (req, res) => {
         cpuTemp: 54 + Math.floor(Math.random() * 8),
         ramUsed: 92 + Math.floor(Math.random() * 30),
         lastCheck: new Date().toLocaleTimeString(),
-      }
+      },
+      official,
     });
   } catch (err) {
     const rjPricesDefault = {
