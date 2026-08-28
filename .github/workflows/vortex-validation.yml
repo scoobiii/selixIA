@@ -1,0 +1,36 @@
+name: SELIX through Vortex
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  selix-vortex:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout SELIX
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Validate SELIX
+        run: |
+          npm install
+          npm run lint
+
+      - name: Checkout Vortex
+        uses: actions/checkout@v4
+        with:
+          repository: scoobiii/vortex
+          ref: feat/selix-selic1d-adapter
+          path: vortex
+
+      - name: Validate SELIX through Vortex
+        working-directory: vortex
+        run: |
+          npm install
+          npm run test:selix
